@@ -6,23 +6,28 @@ import ConstructionScene from '@/components/construction/ConstructionScene.vue'
 import SpaceTimeChart from '@/components/construction/SpaceTimeChart.vue'
 import EarthworkFlow from '@/components/construction/EarthworkFlow.vue'
 import AllocationPanel from '@/components/construction/AllocationPanel.vue'
+import DeviationPanel from '@/components/construction/DeviationPanel.vue'
+import AlertCenter from '@/components/construction/AlertCenter.vue'
 import TimelineBar from '@/components/construction/TimelineBar.vue'
 import EarthworkBalancePanel from '@/components/construction/EarthworkBalancePanel.vue'
 import ProgressPanel from '@/components/construction/ProgressPanel.vue'
 import FleetPanel from '@/components/construction/FleetPanel.vue'
 import DataImportBar from '@/components/construction/DataImportBar.vue'
+import ReportBar from '@/components/construction/ReportBar.vue'
 
-type Key = 'globe' | 'splat' | 'site' | 'spacetime' | 'flow' | 'alloc'
+type Key = 'globe' | 'splat' | 'site' | 'spacetime' | 'flow' | 'alloc' | 'dev' | 'alert'
 const tabs: { key: Key; label: string; icon: string }[] = [
   { key: 'globe', label: '实景地形', icon: '🛰️' },
   { key: 'splat', label: '高斯泼溅(示例)', icon: '🎞️' },
   { key: 'site', label: '4D 施工示意', icon: '🏔️' },
   { key: 'spacetime', label: '时空平衡', icon: '📈' },
   { key: 'flow', label: '调配流向', icon: '🔀' },
-  { key: 'alloc', label: '智能调配', icon: '🧮' }
+  { key: 'alloc', label: '智能调配', icon: '🧮' },
+  { key: 'dev', label: '设计vs实测', icon: '📐' },
+  { key: 'alert', label: '预警中心', icon: '🚨' }
 ]
 const active = ref<Key>('globe')
-const mounted = ref<Record<Key, boolean>>({ globe: true, splat: false, site: false, spacetime: false, flow: false, alloc: false })
+const mounted = ref<Record<Key, boolean>>({ globe: true, splat: false, site: false, spacetime: false, flow: false, alloc: false, dev: false, alert: false })
 function switchTo(k: Key) {
   active.value = k
   mounted.value[k] = true
@@ -33,7 +38,9 @@ const comps = shallowRef({
   site: markRaw(ConstructionScene),
   spacetime: markRaw(SpaceTimeChart),
   flow: markRaw(EarthworkFlow),
-  alloc: markRaw(AllocationPanel)
+  alloc: markRaw(AllocationPanel),
+  dev: markRaw(DeviationPanel),
+  alert: markRaw(AlertCenter)
 })
 </script>
 
@@ -62,6 +69,7 @@ const comps = shallowRef({
     </div>
     <aside class="side-rail">
       <DataImportBar />
+      <ReportBar />
       <EarthworkBalancePanel />
       <ProgressPanel />
       <FleetPanel />
