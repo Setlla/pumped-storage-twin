@@ -7,10 +7,16 @@ const plant = usePlantStore()
 const container = ref<HTMLDivElement | null>(null)
 let scene: PowerhouseScene | null = null
 let ro: ResizeObserver | null = null
+const tourOn = ref(false)
 
 const selected = computed(() =>
   plant.units.find((u) => u.id === plant.selectedUnitId) || null
 )
+
+function toggleTour() {
+  tourOn.value = !tourOn.value
+  scene?.setTour(tourOn.value)
+}
 
 onMounted(() => {
   if (!container.value) return
@@ -45,6 +51,10 @@ function modeText(m: string) {
 <template>
   <div class="ph-wrap">
     <div ref="container" class="ph-canvas" />
+    <button class="tour-btn" :class="{ on: tourOn }" @click="toggleTour">
+      <span class="tour-icon">{{ tourOn ? '⏸' : '🎬' }}</span>
+      {{ tourOn ? '停止巡检' : '自动巡检' }}
+    </button>
     <div class="ph-hint">
       <span class="dot" /> 拖动旋转 · 滚轮缩放 · 点击机组查看详情
     </div>
@@ -79,6 +89,21 @@ function modeText(m: string) {
   background: rgba(8,18,32,0.6); padding: 5px 10px; border-radius: 4px;
 }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-cyan); box-shadow: 0 0 8px var(--accent-cyan); }
+.tour-btn {
+  position: absolute; right: 14px; bottom: 12px; z-index: 6;
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px; font-size: 12px; letter-spacing: 1px; cursor: pointer;
+  color: var(--text-primary); background: rgba(8, 18, 32, 0.78);
+  border: 1px solid var(--border-line); border-radius: 5px;
+  backdrop-filter: blur(6px); transition: all 0.2s;
+}
+.tour-btn:hover { border-color: var(--border-line-strong); }
+.tour-btn.on {
+  color: #061222; font-weight: 600;
+  background: linear-gradient(135deg, var(--accent-cyan), #0099ff);
+  box-shadow: 0 0 14px rgba(0, 212, 255, 0.5);
+}
+.tour-icon { font-size: 13px; }
 .ph-detail {
   position: absolute; right: 14px; top: 14px; width: 246px;
   background: var(--bg-panel-strong); border: 1px solid var(--border-line-strong);

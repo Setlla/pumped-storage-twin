@@ -30,6 +30,8 @@ interface UnitMesh {
   flowGeom: THREE.BufferGeometry
   flowDir: number // +1 down(generating) -1 up(pumping) 0 stop
   spinSpeed: number
+  baseX: number // 机组基准 x 坐标(用于振动抖动复位)
+  vibration: number // 当前振动 mm/s(驱动抖动幅度)
 }
 
 
@@ -46,6 +48,11 @@ export class PowerhouseScene {
   private container: HTMLElement
   private onSelect: (id: number | null) => void
   private hitTargets: THREE.Mesh[] = []
+  // 巡检漫游
+  private tourActive = false
+  private tourIndex = 0
+  private tourDwell = 0
+  private waypoints: { pos: THREE.Vector3; target: THREE.Vector3; unitId: number | null }[] = []
 
   constructor(container: HTMLElement, onSelect: (id: number | null) => void) {
     this.container = container
@@ -79,9 +86,27 @@ export class PowerhouseScene {
     this.buildCavern()
     this.buildCrane()
     for (let i = 0; i < UNIT_COUNT; i++) this.buildUnit(i)
+    this.buildWaypoints()
 
     this.renderer.domElement.addEventListener('pointerdown', this.handleClick)
     this.animate()
+  }
+
+  private buildWaypoints() {
+    // 总览点
+    this.waypoints.push({
+      pos: new THREE.Vector3(34, 26, 40),
+      target: new THREE.Vector3(0, 4, 0),
+      unitId: null
+    })
+    // 逐台机组近景
+    this.units.forEach((um) => {
+      this.waypoints.push({
+        pos: new THREE.Vector3(um.baseX + 7, 11, 18),
+        target: new THREE.Vector3(um.baseX, 5, 0),
+        unitId: um.unitId
+      })
+    })
   }
 
 
@@ -289,7 +314,8 @@ export class PowerhouseScene {
     this.units.push({
       group, rotor, statusRing, statusLight, ringMat, label,
       hitTarget, unitId: index + 1,
-      flowParticles: points, flowGeom: geom, flowDir: 0, spinSpeed: 0
+      flowParticles: points, flowGeom: geom, flowDir: 0, spinSpeed: 0,
+      baseX: x, vibration: 0
     })
   }
 
@@ -358,6 +384,7 @@ export class PowerhouseScene {
 
       // 旋转速度 (rpm → rad/帧基准)
       um.spinSpeed = (st.speedRpm / 333) * 0.5
+      um.vibration = st.vibration
 
       // 水流方向与强度
       const flowMat = um.flowParticles.material as THREE.PointsMaterial
@@ -398,9 +425,44 @@ export class PowerhouseScene {
     this.units.forEach((um) => {
       um.rotor.rotation.y += um.spinSpeed
       this.updateFlow(um, dt * 60)
+      // 振动抖动: 振动越大(故障时~8mm/s)抖动越明显
+      if (um.vibration > 4) {
+        const amp = Math.min(0.12, (um.vibration - 4) * 0.02)
+        um.group.position.x = um.baseX + (Math.random() - 0.5) * amp
+        um.group.position.z = (Math.random() - 0.5) * amp
+      } else if (um.group.position.x !== um.baseX) {
+        um.group.position.x = um.baseX
+        um.group.position.z = 0
+      }
     })
+    if (this.tourActive) this.updateTour(dt)
     this.controls.update()
     this.renderer.render(this.scene, this.camera)
+  }
+
+  private updateTour(dt: number) {
+    const wp = this.waypoints[this.tourIndex]
+    this.camera.position.lerp(wp.pos, 0.025)
+    this.controls.target.lerp(wp.target, 0.05)
+    if (this.camera.position.distanceTo(wp.pos) < 2.5) {
+      this.tourDwell += dt
+      if (this.tourDwell > 2.8) {
+        this.tourDwell = 0
+        this.tourIndex = (this.tourIndex + 1) % this.waypoints.length
+        const next = this.waypoints[this.tourIndex]
+        this.onSelect(next.unitId)
+      }
+    }
+  }
+
+  /** 开关巡检漫游 */
+  setTour(on: boolean) {
+    this.tourActive = on
+    this.controls.enabled = !on
+    if (on) {
+      this.tourIndex = 0
+      this.tourDwell = 0
+    }
   }
 
   resize() {
