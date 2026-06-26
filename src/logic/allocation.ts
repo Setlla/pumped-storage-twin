@@ -56,25 +56,28 @@ function cost(m3Wan: number, km: number): number {
 }
 
 
-export function computeAllocation(): AllocationResult {
+export function computeAllocation(
+  cutZonesIn: typeof CUT_ZONES = CUT_ZONES,
+  fillZonesIn: typeof FILL_ZONES = FILL_ZONES
+): AllocationResult {
   const allocations: Allocation[] = []
   const warnings: Warning[] = []
 
   // 1. 建立可利用供给池(按料质), 不可利用部分直接弃渣
   interface Supply { id: string; name: string; material: Material; avail: number; start: number; end: number }
   const supplies: Supply[] = []
-  CUT_ZONES.forEach((z) => {
+  cutZonesIn.forEach((z) => {
     const usable = z.planM3 * z.usableRate
     const unusable = z.planM3 * (1 - z.usableRate)
     supplies.push({
-      id: z.id, name: z.name, material: CUT_MATERIAL[z.id],
+      id: z.id, name: z.name, material: CUT_MATERIAL[z.id] || 'mixed',
       avail: usable, start: z.startMonth, end: z.startMonth + z.durMonth
     })
     if (unusable > 0.5) {
       const km = haulDistance(z.id, 'spoil')
       allocations.push({
         from: z.id, fromName: z.name, to: 'spoil', toName: '1#弃渣场',
-        material: CUT_MATERIAL[z.id], m3: +unusable.toFixed(0), mode: 'spoil',
+        material: CUT_MATERIAL[z.id] || 'mixed', m3: +unusable.toFixed(0), mode: 'spoil',
         distanceKm: km, trips: trips(unusable), costWan: cost(unusable, km),
         reason: `不可利用料(利用率${(z.usableRate * 100).toFixed(0)}%)就近弃渣`
       })
@@ -82,7 +85,7 @@ export function computeAllocation(): AllocationResult {
   })
 
   // 2. 逐填筑需求(按开工时间排序)分配相容、就近的料源
-  const demands = [...FILL_ZONES].sort((a, b) => a.startMonth - b.startMonth)
+  const demands = [...fillZonesIn].sort((a, b) => a.startMonth - b.startMonth)
   demands.forEach((d) => {
     const accept = FILL_ACCEPT[d.id] || []
     let need = d.planM3
@@ -160,8 +163,8 @@ export function computeAllocation(): AllocationResult {
   })
 
   // 4. KPI 汇总
-  const totalFill = FILL_ZONES.reduce((a, z) => a + z.planM3, 0)
-  const totalCut = CUT_ZONES.reduce((a, z) => a + z.planM3, 0)
+  const totalFill = fillZonesIn.reduce((a, z) => a + z.planM3, 0)
+  const totalCut = cutZonesIn.reduce((a, z) => a + z.planM3, 0)
   const directVol = allocations.filter((a) => a.mode === 'direct' && a.to !== 'spoil').reduce((a, b) => a + b.m3, 0)
   const stockVol = allocations.filter((a) => a.mode === 'stockpile').reduce((a, b) => a + b.m3, 0)
   const spoilVol = allocations.filter((a) => a.mode === 'spoil').reduce((a, b) => a + b.m3, 0)

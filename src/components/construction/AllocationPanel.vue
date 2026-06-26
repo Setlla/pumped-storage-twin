@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useConstructionStore } from '@/stores/construction'
 import { computeAllocation, type HaulMode } from '@/logic/allocation'
 import '@/styles/panel.css'
 
-const result = computed(() => computeAllocation())
+const c = useConstructionStore()
+const result = computed(() => computeAllocation(c.cutZones, c.fillZones))
 
 const modeLabel: Record<HaulMode, string> = {
   direct: '直接上坝', stockpile: '经中转', spoil: '弃渣', borrow: '外购'

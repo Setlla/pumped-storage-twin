@@ -87,18 +87,21 @@ export interface MonthPoint {
 }
 
 /** 预计算逐月时空平衡序列 */
-export function buildMonthlySeries(): MonthPoint[] {
+export function buildMonthlySeries(
+  cuts: CutZone[] = CUT_ZONES,
+  fills: FillZone[] = FILL_ZONES
+): MonthPoint[] {
   const pts: MonthPoint[] = []
   let cumCut = 0
   let cumFill = 0
   for (let m = 1; m <= TOTAL_MONTHS; m++) {
     let cut = 0
     let fill = 0
-    CUT_ZONES.forEach((z) => {
+    cuts.forEach((z) => {
       const d = zoneProgressAt(z, m) - zoneProgressAt(z, m - 1)
       cut += z.planM3 * z.usableRate * d
     })
-    FILL_ZONES.forEach((z) => {
+    fills.forEach((z) => {
       const d = zoneProgressAt(z, m) - zoneProgressAt(z, m - 1)
       fill += z.planM3 * d
     })
