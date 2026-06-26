@@ -1,12 +1,17 @@
 /**
- * 建设期数据模型 — 以"土石方平衡"为核心
+ * 建设期数据模型 — 以"土石方平衡(时空平衡)"为核心
  *
- * 抽水蓄能建设特点: 上水库库盆、地下厂房洞室群、引水/尾水隧洞开挖
- * 产生巨量石方; 应尽量用于面板堆石坝填筑, 实现"挖填平衡、就地利用、
- * 少弃少借", 降低弃渣占地与外购成本.
+ * 时空平衡内涵: 开挖与填筑在时间上错配——上水库/洞室开挖早期即产出
+ * 大量石方, 而面板堆石坝填筑要到中后期才形成需求, 中间差额需临时堆存
+ * (中转料场); 后期再回采填坝. 数字孪生要把"何时挖、何时填、堆存多少"
+ * 的时间演化显性化.
  *
  * 数据为典型 1200MW 级抽蓄工程的合理估算(单位: 万 m³), 用于演示.
  */
+
+export const TOTAL_MONTHS = 84 // 建设周期 7 年
+export const START_YEAR = 2023
+export const START_MONTH = 6 // 2023-06 开工
 
 export interface CutZone {
   id: string
@@ -14,47 +19,99 @@ export interface CutZone {
   planM3: number // 计划开挖方量(万m³)
   usableRate: number // 可利用率(可作填筑料比例)
   rock: number // 石方占比
-  progress: number // 形象进度 0~1
+  startMonth: number // 开工月(自开工起)
+  durMonth: number // 工期(月)
 }
 
 export interface FillZone {
   id: string
   name: string
-  planM3: number // 计划填筑方量(万m³)
-  progress: number
+  planM3: number
+  startMonth: number
+  durMonth: number
 }
 
-/** 开挖区(挖方源) */
+/** 开挖区(挖方源) — 含时间计划 */
 export const CUT_ZONES: CutZone[] = [
-  { id: 'upper', name: '上水库库盆开挖', planM3: 286, usableRate: 0.82, rock: 0.78, progress: 0.74 },
-  { id: 'cavern', name: '地下厂房洞室群', planM3: 96, usableRate: 0.9, rock: 0.97, progress: 0.55 },
-  { id: 'tunnel', name: '引水/尾水隧洞', planM3: 124, usableRate: 0.88, rock: 0.95, progress: 0.48 },
-  { id: 'lower', name: '下水库库盆开挖', planM3: 152, usableRate: 0.7, rock: 0.6, progress: 0.62 },
-  { id: 'road', name: '场内道路及平台', planM3: 58, usableRate: 0.5, rock: 0.4, progress: 0.85 }
+  { id: 'road', name: '场内道路及平台', planM3: 58, usableRate: 0.5, rock: 0.4, startMonth: 0, durMonth: 18 },
+  { id: 'upper', name: '上水库库盆开挖', planM3: 286, usableRate: 0.82, rock: 0.78, startMonth: 6, durMonth: 42 },
+  { id: 'lower', name: '下水库库盆开挖', planM3: 152, usableRate: 0.7, rock: 0.6, startMonth: 10, durMonth: 36 },
+  { id: 'cavern', name: '地下厂房洞室群', planM3: 96, usableRate: 0.9, rock: 0.97, startMonth: 12, durMonth: 40 },
+  { id: 'tunnel', name: '引水/尾水隧洞', planM3: 124, usableRate: 0.88, rock: 0.95, startMonth: 18, durMonth: 42 }
 ]
 
-/** 填筑区(填方去向) */
+/** 填筑区(填方去向) — 含时间计划 */
 export const FILL_ZONES: FillZone[] = [
-  { id: 'upperDam', name: '上水库面板堆石坝', planM3: 318, progress: 0.58 },
-  { id: 'lowerDam', name: '下水库坝/围堰', planM3: 108, progress: 0.66 },
-  { id: 'liner', name: '库盆垫层/过渡料', planM3: 42, progress: 0.5 },
-  { id: 'subgrade', name: '道路路基/场平', planM3: 72, progress: 0.8 }
+  { id: 'subgrade', name: '道路路基/场平', planM3: 72, startMonth: 4, durMonth: 20 },
+  { id: 'lowerDam', name: '下水库坝/围堰', planM3: 108, startMonth: 16, durMonth: 30 },
+  { id: 'upperDam', name: '上水库面板堆石坝', planM3: 318, startMonth: 24, durMonth: 42 },
+  { id: 'liner', name: '库盆垫层/过渡料', planM3: 42, startMonth: 44, durMonth: 24 }
 ]
 
-/** 弃渣场 */
-export const SPOIL_YARD = { name: '1#弃渣场', capacityM3: 240, usedM3: 132 }
-/** 料场(缺方时补充特殊料) */
-export const BORROW_AREA = { name: '垫层料加工区', reserveM3: 80, usedM3: 28 }
+/** 弃渣场 / 中转堆存 / 料场 */
+export const SPOIL_YARD = { name: '1#弃渣场', capacityM3: 240 }
+export const STOCKPILE = { name: '中转料场(临时堆存)', capacityM3: 180 }
+export const BORROW_AREA = { name: '垫层料加工区', reserveM3: 80 }
 
 export const totalCutPlan = () => CUT_ZONES.reduce((s, z) => s + z.planM3, 0)
 export const totalFillPlan = () => FILL_ZONES.reduce((s, z) => s + z.planM3, 0)
-/** 可利用方量(开挖料可用于填筑的部分) */
 export const usableCutPlan = () =>
   CUT_ZONES.reduce((s, z) => s + z.planM3 * z.usableRate, 0)
 
+/** 平滑 S 曲线(smoothstep) */
+function smooth(x: number): number {
+  const t = Math.max(0, Math.min(1, x))
+  return t * t * (3 - 2 * t)
+}
+
+/** 某工区在第 month 月的累计完成比例 0~1 */
+export function zoneProgressAt(z: { startMonth: number; durMonth: number }, month: number): number {
+  return smooth((month - z.startMonth) / z.durMonth)
+}
+
+/** 当前月日期标签 */
+export function monthLabel(month: number): string {
+  const total = START_MONTH - 1 + Math.floor(month)
+  const y = START_YEAR + Math.floor(total / 12)
+  const m = (total % 12) + 1
+  return `${y}.${String(m).padStart(2, '0')}`
+}
+
+export interface MonthPoint {
+  month: number
+  cut: number // 当月开挖(可利用)
+  fill: number // 当月填筑需求
+  cumCut: number // 累计可利用开挖
+  cumFill: number // 累计填筑
+  stock: number // 累计堆存(cumCut-cumFill, 体现时空错配)
+}
+
+/** 预计算逐月时空平衡序列 */
+export function buildMonthlySeries(): MonthPoint[] {
+  const pts: MonthPoint[] = []
+  let cumCut = 0
+  let cumFill = 0
+  for (let m = 1; m <= TOTAL_MONTHS; m++) {
+    let cut = 0
+    let fill = 0
+    CUT_ZONES.forEach((z) => {
+      const d = zoneProgressAt(z, m) - zoneProgressAt(z, m - 1)
+      cut += z.planM3 * z.usableRate * d
+    })
+    FILL_ZONES.forEach((z) => {
+      const d = zoneProgressAt(z, m) - zoneProgressAt(z, m - 1)
+      fill += z.planM3 * d
+    })
+    cumCut += cut
+    cumFill += fill
+    pts.push({ month: m, cut, fill, cumCut, cumFill, stock: Math.max(0, cumCut - cumFill) })
+  }
+  return pts
+}
+
+
 /**
- * 调配关系(挖→填/弃, 借→填). 单位万m³, 用于流向图.
- * 体现"时空平衡"的方量调配方案.
+ * 调配关系(挖→填/弃, 借→填). 单位万m³, 用于调配流向图.
  */
 export const HAUL_PLAN: { from: string; to: string; m3: number }[] = [
   { from: 'upper', to: 'upperDam', m3: 198 },
