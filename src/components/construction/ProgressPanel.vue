@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useConstructionStore } from '@/stores/construction'
-import { CUT_ZONES, FILL_ZONES } from '@/data/construction'
 import '@/styles/panel.css'
 
 const c = useConstructionStore()
@@ -19,7 +18,7 @@ const c = useConstructionStore()
 
       <div class="zone-group">
         <div class="zg-title cut">开挖工程</div>
-        <div v-for="z in CUT_ZONES" :key="z.id" class="zrow">
+        <div v-for="z in c.cutProgress" :key="z.id" class="zrow">
           <span class="zname">{{ z.name }}</span>
           <div class="bar"><div class="bar-fill cut" :style="{ width: z.progress * 100 + '%' }" /></div>
           <span class="zpct">{{ (z.progress * 100).toFixed(0) }}%</span>
@@ -28,7 +27,7 @@ const c = useConstructionStore()
 
       <div class="zone-group">
         <div class="zg-title fill">填筑工程</div>
-        <div v-for="z in FILL_ZONES" :key="z.id" class="zrow">
+        <div v-for="z in c.fillProgress" :key="z.id" class="zrow">
           <span class="zname">{{ z.name }}</span>
           <div class="bar"><div class="bar-fill fill" :style="{ width: z.progress * 100 + '%' }" /></div>
           <span class="zpct">{{ (z.progress * 100).toFixed(0) }}%</span>

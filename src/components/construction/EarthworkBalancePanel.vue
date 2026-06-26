@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useConstructionStore } from '@/stores/construction'
-import { SPOIL_YARD, BORROW_AREA } from '@/data/construction'
+import { SPOIL_YARD, STOCKPILE } from '@/data/construction'
 import '@/styles/panel.css'
 
 const c = useConstructionStore()
@@ -54,14 +54,14 @@ const balColor = computed(() =>
 
       <div class="yard">
         <div class="yard-item">
-          <div class="yard-h"><span>{{ SPOIL_YARD.name }}</span><span>{{ c.spoilUsedPct.toFixed(0) }}%</span></div>
-          <div class="bar"><div class="bar-fill spoil" :style="{ width: c.spoilUsedPct + '%' }" /></div>
-          <small>{{ SPOIL_YARD.usedM3 }} / {{ SPOIL_YARD.capacityM3 }} 万m³</small>
+          <div class="yard-h"><span>{{ STOCKPILE.name }}</span><span>{{ c.stockPct.toFixed(0) }}%</span></div>
+          <div class="bar"><div class="bar-fill stock" :style="{ width: c.stockPct + '%' }" /></div>
+          <small>{{ c.stockNow.toFixed(0) }} / {{ STOCKPILE.capacityM3 }} 万m³ · 当前堆存</small>
         </div>
         <div class="yard-item">
-          <div class="yard-h"><span>{{ BORROW_AREA.name }}</span><span>{{ c.borrowUsedPct.toFixed(0) }}%</span></div>
-          <div class="bar"><div class="bar-fill borrow" :style="{ width: c.borrowUsedPct + '%' }" /></div>
-          <small>{{ BORROW_AREA.usedM3 }} / {{ BORROW_AREA.reserveM3 }} 万m³</small>
+          <div class="yard-h"><span>{{ SPOIL_YARD.name }}</span><span>{{ c.spoilPct.toFixed(0) }}%</span></div>
+          <div class="bar"><div class="bar-fill spoil" :style="{ width: c.spoilPct + '%' }" /></div>
+          <small>{{ c.spoilUsed.toFixed(0) }} / {{ SPOIL_YARD.capacityM3 }} 万m³ · 累计弃渣</small>
         </div>
       </div>
     </div>
@@ -89,6 +89,7 @@ const balColor = computed(() =>
 .bar { height: 6px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
 .bar-fill.use { background: linear-gradient(90deg, #00ff88, #00d4ff); }
+.bar-fill.stock { background: linear-gradient(90deg, #ffce5c, #ff9d00); }
 .bar-fill.spoil { background: linear-gradient(90deg, #a78bfa, #7c5cff); }
 .bar-fill.borrow { background: linear-gradient(90deg, #ff9d00, #ff5c00); }
 .yard { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }

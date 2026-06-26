@@ -1,47 +1,54 @@
 <script setup lang="ts">
 import { ref, shallowRef, markRaw } from 'vue'
 import ConstructionScene from '@/components/construction/ConstructionScene.vue'
+import SpaceTimeChart from '@/components/construction/SpaceTimeChart.vue'
 import EarthworkFlow from '@/components/construction/EarthworkFlow.vue'
+import TimelineBar from '@/components/construction/TimelineBar.vue'
 import EarthworkBalancePanel from '@/components/construction/EarthworkBalancePanel.vue'
 import ProgressPanel from '@/components/construction/ProgressPanel.vue'
 import FleetPanel from '@/components/construction/FleetPanel.vue'
 
-type Key = 'site' | 'flow'
+type Key = 'site' | 'spacetime' | 'flow'
 const tabs: { key: Key; label: string; icon: string }[] = [
-  { key: 'site', label: '施工三维', icon: '🏗️' },
+  { key: 'site', label: '4D 施工三维', icon: '🏔️' },
+  { key: 'spacetime', label: '时空平衡', icon: '📈' },
   { key: 'flow', label: '土石方调配', icon: '🔀' }
 ]
 const active = ref<Key>('site')
-const mounted = ref<Record<Key, boolean>>({ site: true, flow: false })
+const mounted = ref<Record<Key, boolean>>({ site: true, spacetime: false, flow: false })
 function switchTo(k: Key) {
   active.value = k
   mounted.value[k] = true
 }
 const comps = shallowRef({
   site: markRaw(ConstructionScene),
+  spacetime: markRaw(SpaceTimeChart),
   flow: markRaw(EarthworkFlow)
 })
 </script>
 
 <template>
   <div class="phase-body">
-    <div class="scene-area">
-      <div class="tab-bar">
-        <button
-          v-for="t in tabs" :key="t.key"
-          class="tab" :class="{ active: active === t.key }"
-          @click="switchTo(t.key)"
-        >
-          <span>{{ t.icon }}</span>{{ t.label }}
-        </button>
+    <div class="left-col">
+      <div class="scene-area">
+        <div class="tab-bar">
+          <button
+            v-for="t in tabs" :key="t.key"
+            class="tab" :class="{ active: active === t.key }"
+            @click="switchTo(t.key)"
+          >
+            <span>{{ t.icon }}</span>{{ t.label }}
+          </button>
+        </div>
+        <div class="view-stack">
+          <template v-for="t in tabs" :key="t.key">
+            <div v-show="active === t.key" class="view-pane">
+              <component :is="comps[t.key]" v-if="mounted[t.key]" />
+            </div>
+          </template>
+        </div>
       </div>
-      <div class="view-stack">
-        <template v-for="t in tabs" :key="t.key">
-          <div v-show="active === t.key" class="view-pane">
-            <component :is="comps[t.key]" v-if="mounted[t.key]" />
-          </div>
-        </template>
-      </div>
+      <TimelineBar />
     </div>
     <aside class="side-rail">
       <EarthworkBalancePanel />
@@ -53,6 +60,7 @@ const comps = shallowRef({
 
 <style scoped>
 .phase-body { flex: 1; display: flex; min-height: 0; padding: 10px; gap: 10px; }
+.left-col { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .scene-area {
   flex: 1; position: relative;
   border: 1px solid var(--border-line); border-radius: 6px;
@@ -79,4 +87,5 @@ const comps = shallowRef({
 }
 .view-stack { flex: 1; position: relative; height: 100%; }
 .view-pane { position: absolute; inset: 0; }
+.timeline-wrap { flex-shrink: 0; }
 </style>
