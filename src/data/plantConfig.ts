@@ -30,24 +30,24 @@ export const PLANT_INFO = {
   location: '江苏省连云港市连云区宿城街道 (云台山)'
 } as const
 
-/** 关键设施地理坐标 (云台山宿城一带, 经纬度近似) */
+/** 关键设施地理坐标 (云台山宿城一带, 紧凑南北向布置, 强化上下库高差立体感) */
 export const SITE_COORDS = {
-  // 云台山主峰附近, 上水库设于山顶
-  upperReservoir: { lon: 119.358, lat: 34.738, height: 540 },
-  // 下水库设于山下近平原侧
-  lowerReservoir: { lon: 119.342, lat: 34.692, height: 80 },
-  // 地下厂房 (露头表示)
-  powerhouse: { lon: 119.347, lat: 34.715, height: 60 },
-  // 升压站
-  switchyard: { lon: 119.336, lat: 34.708, height: 70 },
-  // 镜头默认位置 (俯视全场)
-  cameraHome: { lon: 119.35, lat: 34.69, height: 6500 }
+  // 上水库设于云台山顶
+  upperReservoir: { lon: 119.3500, lat: 34.7250, height: 500 },
+  // 下水库设于山下(约 1.6km 之南), 形成高差
+  lowerReservoir: { lon: 119.3500, lat: 34.7100, height: 70 },
+  // 地下厂房 (位于山体内部偏下游)
+  powerhouse: { lon: 119.3500, lat: 34.7185, height: 110 },
+  // 升压站 (地面, 下游侧)
+  switchyard: { lon: 119.3475, lat: 34.7120, height: 90 },
+  // 镜头默认位置 (东南方俯瞰全场)
+  cameraHome: { lon: 119.3640, lat: 34.7010, height: 2200 }
 } as const
 
 /** 上水库参数 */
 export const UPPER_RES = {
-  normalLevelM: 540,
-  deadLevelM: 510,
+  normalLevelM: 500,
+  deadLevelM: 470,
   totalCapacityM3: 11_500_000,
   activeCapacityM3: 9_800_000,
   surfaceAreaM2: 600_000
@@ -55,8 +55,8 @@ export const UPPER_RES = {
 
 /** 下水库参数 */
 export const LOWER_RES = {
-  normalLevelM: 95,
-  deadLevelM: 70,
+  normalLevelM: 72,
+  deadLevelM: 52,
   totalCapacityM3: 13_200_000,
   activeCapacityM3: 10_500_000,
   surfaceAreaM2: 720_000
