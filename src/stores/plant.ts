@@ -55,6 +55,11 @@ export const usePlantStore = defineStore('plant', () => {
   const simSpeed = ref(1) // 1x ~ 10x
   const alarms = ref<AlarmRecord[]>([])
   const powerHistory = ref<{ ts: number; mw: number }[]>([])
+  // 能量统计 (MWh)
+  const energyGenerated = ref(0)
+  const energyPumped = ref(0)
+  // 当前选中机组 (用于 3D 场景联动)
+  const selectedUnitId = ref<number | null>(null)
 
   // ---------------- 计算 ----------------
   const totalPowerMW = computed(() =>
@@ -73,6 +78,11 @@ export const usePlantStore = defineStore('plant', () => {
   const lowerFillPct = computed(() => {
     const r = lowerReservoir.value
     return ((r.levelM - r.deadLevelM) / (r.normalLevelM - r.deadLevelM)) * 100
+  })
+  // 综合效率(往返效率): 发电量/抽水耗电量
+  const roundTripEfficiency = computed(() => {
+    if (energyPumped.value < 0.01) return 0
+    return (energyGenerated.value / energyPumped.value) * 100
   })
 
 
@@ -131,6 +141,10 @@ export const usePlantStore = defineStore('plant', () => {
     u.hasAlarm = false
     u.mode = 'stopped'
     pushAlarm('info', `${u.name} 故障已复位`)
+  }
+
+  function selectUnit(id: number | null) {
+    selectedUnitId.value = id
   }
 
 
@@ -208,6 +222,13 @@ export const usePlantStore = defineStore('plant', () => {
     powerHistory.value.push({ ts: Date.now(), mw: totalPowerMW.value })
     if (powerHistory.value.length > 240) powerHistory.value.shift()
 
+    // 能量累计 (MWh): 功率(MW) * 时间(h). dt 为加速后的秒数
+    const hours = dt / 3600
+    units.value.forEach((u) => {
+      if (u.mode === 'generating') energyGenerated.value += u.powerMW * hours
+      else if (u.mode === 'pumping') energyPumped.value += Math.abs(u.powerMW) * hours
+    })
+
     // 简单越限告警
     units.value.forEach((u) => {
       if (u.bearingTemp > 75 && !u.hasAlarm) {
@@ -238,15 +259,20 @@ export const usePlantStore = defineStore('plant', () => {
     simSpeed,
     alarms,
     powerHistory,
+    energyGenerated,
+    energyPumped,
+    selectedUnitId,
     totalPowerMW,
     runningUnitCount,
     netHeadM,
     upperFillPct,
     lowerFillPct,
+    roundTripEfficiency,
     setGlobalMode,
     toggleUnit,
     injectFault,
     clearFault,
+    selectUnit,
     tick
   }
 })

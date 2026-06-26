@@ -7,6 +7,11 @@ import { SITE_COORDS, PLANT_INFO } from '@/data/plantConfig'
 const container = ref<HTMLDivElement | null>(null)
 const plant = usePlantStore()
 let viewer: Cesium.Viewer | null = null
+let upperWater: Cesium.Entity | null = null
+let lowerWater: Cesium.Entity | null = null
+let headTunnel: Cesium.Entity | null = null
+let tailTunnel: Cesium.Entity | null = null
+let flowPhase = 0
 
 onMounted(() => {
   if (!container.value) return
@@ -51,6 +56,8 @@ onMounted(() => {
   })
 
   addMarkers()
+  addWaterSurfaces()
+  startFlowAnimation()
 })
 
 function addMarkers() {
@@ -163,7 +170,7 @@ function addMarkers() {
   })
 
   // 引水隧洞示意线
-  ds.entities.add({
+  headTunnel = ds.entities.add({
     name: '引水隧洞',
     polyline: {
       positions: Cesium.Cartesian3.fromDegreesArrayHeights([
@@ -184,7 +191,7 @@ function addMarkers() {
   })
 
   // 尾水隧洞示意线
-  ds.entities.add({
+  tailTunnel = ds.entities.add({
     name: '尾水隧洞',
     polyline: {
       positions: Cesium.Cartesian3.fromDegreesArrayHeights([
@@ -205,10 +212,99 @@ function addMarkers() {
   })
 }
 
+function addWaterSurfaces() {
+  if (!viewer) return
+  const ds = new Cesium.CustomDataSource('water')
+  viewer.dataSources.add(ds)
+
+  // 上水库水面 (椭圆,高度随水位用 CallbackProperty)
+  upperWater = ds.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(
+      SITE_COORDS.upperReservoir.lon,
+      SITE_COORDS.upperReservoir.lat,
+      0
+    ),
+    ellipse: {
+      semiMajorAxis: 420,
+      semiMinorAxis: 300,
+      height: new Cesium.CallbackProperty(
+        () => plant.upperReservoir.levelM,
+        false
+      ),
+      material: Cesium.Color.fromCssColorString('#0aa0ff').withAlpha(0.55),
+      outline: true,
+      outlineColor: Cesium.Color.fromCssColorString('#7fdfff').withAlpha(0.7)
+    }
+  })
+
+  // 下水库水面
+  lowerWater = ds.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(
+      SITE_COORDS.lowerReservoir.lon,
+      SITE_COORDS.lowerReservoir.lat,
+      0
+    ),
+    ellipse: {
+      semiMajorAxis: 480,
+      semiMinorAxis: 340,
+      height: new Cesium.CallbackProperty(
+        () => plant.lowerReservoir.levelM,
+        false
+      ),
+      material: Cesium.Color.fromCssColorString('#0a78dd').withAlpha(0.55),
+      outline: true,
+      outlineColor: Cesium.Color.fromCssColorString('#7fbfff').withAlpha(0.7)
+    }
+  })
+}
+
+function startFlowAnimation() {
+  if (!viewer) return
+  // 用 CallbackProperty 让隧洞辉光强度脉动,颜色随工况
+  const headColor = new Cesium.CallbackProperty(() => {
+    const mode = plant.globalMode
+    const base =
+      mode === 'generating' ? '#00e0ff' : mode === 'pumping' ? '#ff9d00' : '#2a5a8a'
+    const pulse = 0.45 + 0.35 * Math.abs(Math.sin(flowPhase))
+    return Cesium.Color.fromCssColorString(base).withAlpha(
+      mode === 'idle' ? 0.4 : pulse
+    )
+  }, false)
+  const tailColor = new Cesium.CallbackProperty(() => {
+    const mode = plant.globalMode
+    const base =
+      mode === 'generating' ? '#0099ff' : mode === 'pumping' ? '#ffb84d' : '#2a5a8a'
+    const pulse = 0.45 + 0.35 * Math.abs(Math.sin(flowPhase + 1.5))
+    return Cesium.Color.fromCssColorString(base).withAlpha(
+      mode === 'idle' ? 0.4 : pulse
+    )
+  }, false)
+
+  if (headTunnel?.polyline) {
+    headTunnel.polyline.material = new Cesium.PolylineGlowMaterialProperty({
+      glowPower: 0.35,
+      color: headColor
+    })
+  }
+  if (tailTunnel?.polyline) {
+    tailTunnel.polyline.material = new Cesium.PolylineGlowMaterialProperty({
+      glowPower: 0.35,
+      color: tailColor
+    })
+  }
+
+  // 推进相位
+  viewer.scene.preRender.addEventListener(() => {
+    const speed = plant.globalMode === 'idle' ? 0.02 : 0.12
+    flowPhase += speed
+  })
+}
+
 onBeforeUnmount(() => {
   viewer?.destroy()
   viewer = null
 })
+
 </script>
 
 <template>

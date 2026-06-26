@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import TopBar from '@/components/layout/TopBar.vue'
 import BottomBar from '@/components/layout/BottomBar.vue'
-import CesiumScene from '@/components/scene/CesiumScene.vue'
+import SceneTabs from '@/components/scene/SceneTabs.vue'
 import ReservoirPanel from '@/components/panels/ReservoirPanel.vue'
 import UnitStatusPanel from '@/components/panels/UnitStatusPanel.vue'
+import EnergyPanel from '@/components/panels/EnergyPanel.vue'
 import PowerCurveChart from '@/components/panels/PowerCurveChart.vue'
 import AlarmFeed from '@/components/panels/AlarmFeed.vue'
 </script>
@@ -13,10 +14,11 @@ import AlarmFeed from '@/components/panels/AlarmFeed.vue'
     <TopBar />
     <div class="dashboard-body">
       <div class="scene-area">
-        <CesiumScene />
+        <SceneTabs />
       </div>
       <aside class="side-rail">
         <ReservoirPanel />
+        <EnergyPanel />
         <UnitStatusPanel />
         <PowerCurveChart />
         <AlarmFeed />
