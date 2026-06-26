@@ -8,6 +8,7 @@ import EarthworkFlow from '@/components/construction/EarthworkFlow.vue'
 import AllocationPanel from '@/components/construction/AllocationPanel.vue'
 import DeviationPanel from '@/components/construction/DeviationPanel.vue'
 import AlertCenter from '@/components/construction/AlertCenter.vue'
+import MasterDataPanel from '@/components/construction/MasterDataPanel.vue'
 import TimelineBar from '@/components/construction/TimelineBar.vue'
 import EarthworkBalancePanel from '@/components/construction/EarthworkBalancePanel.vue'
 import ProgressPanel from '@/components/construction/ProgressPanel.vue'
@@ -15,7 +16,7 @@ import FleetPanel from '@/components/construction/FleetPanel.vue'
 import DataImportBar from '@/components/construction/DataImportBar.vue'
 import ReportBar from '@/components/construction/ReportBar.vue'
 
-type Key = 'globe' | 'splat' | 'site' | 'spacetime' | 'flow' | 'alloc' | 'dev' | 'alert'
+type Key = 'globe' | 'splat' | 'site' | 'spacetime' | 'flow' | 'alloc' | 'dev' | 'alert' | 'master'
 const tabs: { key: Key; label: string; icon: string }[] = [
   { key: 'globe', label: '实景地形', icon: '🛰️' },
   { key: 'splat', label: '高斯泼溅(示例)', icon: '🎞️' },
@@ -24,10 +25,11 @@ const tabs: { key: Key; label: string; icon: string }[] = [
   { key: 'flow', label: '调配流向', icon: '🔀' },
   { key: 'alloc', label: '智能调配', icon: '🧮' },
   { key: 'dev', label: '设计vs实测', icon: '📐' },
-  { key: 'alert', label: '预警中心', icon: '🚨' }
+  { key: 'alert', label: '预警中心', icon: '🚨' },
+  { key: 'master', label: '基础资料', icon: '🗂️' }
 ]
 const active = ref<Key>('globe')
-const mounted = ref<Record<Key, boolean>>({ globe: true, splat: false, site: false, spacetime: false, flow: false, alloc: false, dev: false, alert: false })
+const mounted = ref<Record<Key, boolean>>({ globe: true, splat: false, site: false, spacetime: false, flow: false, alloc: false, dev: false, alert: false, master: false })
 function switchTo(k: Key) {
   active.value = k
   mounted.value[k] = true
@@ -40,7 +42,8 @@ const comps = shallowRef({
   flow: markRaw(EarthworkFlow),
   alloc: markRaw(AllocationPanel),
   dev: markRaw(DeviationPanel),
-  alert: markRaw(AlertCenter)
+  alert: markRaw(AlertCenter),
+  master: markRaw(MasterDataPanel)
 })
 </script>
 
