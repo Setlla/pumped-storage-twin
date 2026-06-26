@@ -3,6 +3,7 @@ import { onMounted, onBeforeUnmount, ref } from 'vue'
 import * as Cesium from 'cesium'
 import { usePlantStore } from '@/stores/plant'
 import { SITE_COORDS, PLANT_INFO, UPPER_RES, LOWER_RES } from '@/data/plantConfig'
+import { CESIUM_ION_TOKEN, HAS_ION } from '@/config/cesium'
 
 const container = ref<HTMLDivElement | null>(null)
 const plant = usePlantStore()
@@ -54,8 +55,8 @@ const tailPath = [
 onMounted(async () => {
   if (!container.value) return
 
-  const ionToken = import.meta.env.VITE_CESIUM_ION_TOKEN
-  const hasIon = !!ionToken && ionToken.length > 60
+  const ionToken = CESIUM_ION_TOKEN
+  const hasIon = HAS_ION
 
   const viewerOptions: Cesium.Viewer.ConstructorOptions = {
     baseLayerPicker: false,

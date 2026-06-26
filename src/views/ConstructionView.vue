@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, shallowRef, markRaw } from 'vue'
+import ConstructionGlobe from '@/components/construction/ConstructionGlobe.vue'
 import ConstructionScene from '@/components/construction/ConstructionScene.vue'
 import SpaceTimeChart from '@/components/construction/SpaceTimeChart.vue'
 import EarthworkFlow from '@/components/construction/EarthworkFlow.vue'
@@ -8,19 +9,21 @@ import EarthworkBalancePanel from '@/components/construction/EarthworkBalancePan
 import ProgressPanel from '@/components/construction/ProgressPanel.vue'
 import FleetPanel from '@/components/construction/FleetPanel.vue'
 
-type Key = 'site' | 'spacetime' | 'flow'
+type Key = 'globe' | 'site' | 'spacetime' | 'flow'
 const tabs: { key: Key; label: string; icon: string }[] = [
-  { key: 'site', label: '4D 施工三维', icon: '🏔️' },
+  { key: 'globe', label: '实景地形', icon: '🛰️' },
+  { key: 'site', label: '4D 施工示意', icon: '🏔️' },
   { key: 'spacetime', label: '时空平衡', icon: '📈' },
   { key: 'flow', label: '土石方调配', icon: '🔀' }
 ]
-const active = ref<Key>('site')
-const mounted = ref<Record<Key, boolean>>({ site: true, spacetime: false, flow: false })
+const active = ref<Key>('globe')
+const mounted = ref<Record<Key, boolean>>({ globe: true, site: false, spacetime: false, flow: false })
 function switchTo(k: Key) {
   active.value = k
   mounted.value[k] = true
 }
 const comps = shallowRef({
+  globe: markRaw(ConstructionGlobe),
   site: markRaw(ConstructionScene),
   spacetime: markRaw(SpaceTimeChart),
   flow: markRaw(EarthworkFlow)
