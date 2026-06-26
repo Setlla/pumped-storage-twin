@@ -126,3 +126,47 @@ export const HAUL_PLAN: { from: string; to: string; m3: number }[] = [
   { from: 'road', to: 'spoil', m3: 30 },
   { from: 'borrow', to: 'liner', m3: 42 }
 ]
+
+
+/** 料质类型 */
+export type Material = 'rock' | 'mixed' | 'soil'
+export const MATERIAL_LABEL: Record<Material, string> = {
+  rock: '石方/堆石料', mixed: '土石混合料', soil: '土方/覆盖层'
+}
+
+/** 各开挖区产出料质 */
+export const CUT_MATERIAL: Record<string, Material> = {
+  upper: 'rock', cavern: 'rock', tunnel: 'rock', lower: 'mixed', road: 'soil'
+}
+
+/** 各填筑区可接收料质(料质相容/禁配规则) */
+export const FILL_ACCEPT: Record<string, Material[]> = {
+  upperDam: ['rock'], // 面板堆石坝主体, 仅收石方
+  lowerDam: ['rock', 'mixed'],
+  subgrade: ['soil', 'mixed', 'rock'], // 路基场平, 较宽松
+  liner: [] // 垫层/过渡料需专门加工, 不收原状开挖料 → 走料场
+}
+
+/** 平面位置(相对坐标, 米), 用于运距测算 */
+export const ZONE_POS: Record<string, [number, number]> = {
+  // 开挖区
+  upper: [-200, 600], cavern: [0, 120], tunnel: [-60, 320], lower: [120, -420], road: [220, 20],
+  // 填筑区
+  upperDam: [-200, 500], lowerDam: [110, -360], subgrade: [220, 60], liner: [-185, 470],
+  // 场地
+  stockpile: [-110, 360], spoil: [-420, 220], borrow: [320, 110]
+}
+
+/** 两点运距(km) */
+export function haulDistance(a: string, b: string): number {
+  const pa = ZONE_POS[a], pb = ZONE_POS[b]
+  if (!pa || !pb) return 1
+  const d = Math.sqrt((pa[0] - pb[0]) ** 2 + (pa[1] - pb[1]) ** 2)
+  return +(d / 1000).toFixed(2) // 米→km
+}
+
+/** 运输/成本参数 */
+export const HAUL_PARAMS = {
+  truckCapacityM3: 25, // 单车方量
+  costPerKmPerTrip: 8 // 元/车·km(含油耗/人工等综合)
+}
