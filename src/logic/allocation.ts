@@ -49,17 +49,28 @@ export interface AllocationResult {
 }
 
 function trips(m3Wan: number): number {
-  return Math.round((m3Wan * 1e4) / HAUL_PARAMS.truckCapacityM3)
+  return Math.round((m3Wan * 1e4) / P.cap)
 }
 function cost(m3Wan: number, km: number): number {
-  return +((trips(m3Wan) * km * HAUL_PARAMS.costPerKmPerTrip) / 1e4).toFixed(1)
+  return +((trips(m3Wan) * km * P.unit) / 1e4).toFixed(1)
 }
+
+// 可配置运输参数(由调配引擎入参覆盖)
+let P = { cap: HAUL_PARAMS.truckCapacityM3, unit: HAUL_PARAMS.costPerKmPerTrip, lead: 6 }
+
+export interface AllocParams { truckCapacityM3: number; costPerKmPerTrip: number; stockpileLeadMonth: number }
 
 
 export function computeAllocation(
   cutZonesIn: typeof CUT_ZONES = CUT_ZONES,
-  fillZonesIn: typeof FILL_ZONES = FILL_ZONES
+  fillZonesIn: typeof FILL_ZONES = FILL_ZONES,
+  params?: Partial<AllocParams>
 ): AllocationResult {
+  P = {
+    cap: params?.truckCapacityM3 || HAUL_PARAMS.truckCapacityM3,
+    unit: params?.costPerKmPerTrip || HAUL_PARAMS.costPerKmPerTrip,
+    lead: params?.stockpileLeadMonth ?? 6
+  }
   const allocations: Allocation[] = []
   const warnings: Warning[] = []
 
@@ -117,7 +128,7 @@ export function computeAllocation(
       // 时间关系判定: 开挖早于填筑较多 → 经中转; 时间重叠 → 直接上坝; 开挖晚于填筑 → 冲突
       let mode: HaulMode = 'direct'
       let reason = `料质相容(${MATERIAL_LABEL[s.material]}), 就近直接上坝`
-      if (s.start > d.startMonth + 6) {
+      if (s.start > d.startMonth + P.lead) {
         mode = 'direct'
         reason = '开挖晚于填筑需求, 存在时间缺口(见预警)'
         warnings.push({ level: 'critical', text: `时间错配: ${s.name}(${s.start}月起)晚于 ${d.name}(${d.startMonth}月起), ${take.toFixed(0)} 万m³ 需调整工序或他源补充` })

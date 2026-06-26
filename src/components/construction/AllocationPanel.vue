@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useConstructionStore } from '@/stores/construction'
+import { useAllocationConfig } from '@/stores/allocationConfig'
 import { computeAllocation, type HaulMode } from '@/logic/allocation'
 import '@/styles/panel.css'
 
 const c = useConstructionStore()
-const result = computed(() => computeAllocation(c.cutZones, c.fillZones))
+const cfg = useAllocationConfig()
+const result = computed(() => computeAllocation(c.cutZones, c.fillZones, {
+  truckCapacityM3: cfg.truckCapacityM3,
+  costPerKmPerTrip: cfg.costPerKmPerTrip,
+  stockpileLeadMonth: cfg.stockpileLeadMonth
+}))
+function onCfg() { cfg.persist() }
 
 const modeLabel: Record<HaulMode, string> = {
   direct: '直接上坝', stockpile: '经中转', spoil: '弃渣', borrow: '外购'
@@ -17,6 +24,15 @@ const modeCls: Record<HaulMode, string> = {
 
 <template>
   <div class="alloc-wrap">
+    <!-- 可配置调配参数 -->
+    <div class="cfg-bar">
+      <span class="cfg-t">调配参数</span>
+      <label>单车方量<input type="number" v-model.number="cfg.truckCapacityM3" @change="onCfg" /><i>m³</i></label>
+      <label>运输单价<input type="number" v-model.number="cfg.costPerKmPerTrip" @change="onCfg" /><i>元/车·km</i></label>
+      <label>中转判定提前期<input type="number" v-model.number="cfg.stockpileLeadMonth" @change="onCfg" /><i>月</i></label>
+      <button class="cfg-reset" @click="cfg.reset()">恢复默认</button>
+    </div>
+
     <!-- KPI -->
     <div class="kpis">
       <div class="kpi"><div class="kv hi">{{ result.kpi.directRate }}<small>%</small></div><div class="kl">直接上坝率</div></div>
@@ -75,6 +91,12 @@ const modeCls: Record<HaulMode, string> = {
 
 <style scoped>
 .alloc-wrap { width: 100%; height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 12px; overflow: hidden; background: #061222; }
+.cfg-bar { display: flex; align-items: center; gap: 14px; padding: 8px 12px; background: var(--bg-panel); border: 1px solid var(--border-line); border-radius: 6px; flex-shrink: 0; flex-wrap: wrap; }
+.cfg-t { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+.cfg-bar label { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); }
+.cfg-bar input { width: 64px; background: rgba(0,30,60,0.4); border: 1px solid var(--border-line); border-radius: 4px; color: var(--text-primary); padding: 4px 6px; font-size: 12px; }
+.cfg-bar i { font-style: normal; color: var(--text-dim); font-size: 11px; }
+.cfg-reset { margin-left: auto; padding: 4px 10px; font-size: 11px; border: 1px solid var(--border-line); border-radius: 4px; background: transparent; color: var(--text-secondary); cursor: pointer; }
 .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; flex-shrink: 0; }
 .kpi { background: var(--bg-panel); border: 1px solid var(--border-line); border-radius: 6px; padding: 10px 12px; text-align: center; }
 .kv { font-size: 22px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }

@@ -29,10 +29,8 @@ const tabs: { key: Key; label: string; icon: string }[] = [
   { key: 'master', label: '基础资料', icon: '🗂️' }
 ]
 const active = ref<Key>('globe')
-const mounted = ref<Record<Key, boolean>>({ globe: true, splat: false, site: false, spacetime: false, flow: false, alloc: false, dev: false, alert: false, master: false })
 function switchTo(k: Key) {
   active.value = k
-  mounted.value[k] = true
 }
 const comps = shallowRef({
   globe: markRaw(ConstructionGlobe),
@@ -61,11 +59,7 @@ const comps = shallowRef({
           </button>
         </div>
         <div class="view-stack">
-          <template v-for="t in tabs" :key="t.key">
-            <div v-show="active === t.key" class="view-pane">
-              <component :is="comps[t.key]" v-if="mounted[t.key]" />
-            </div>
-          </template>
+          <component :is="comps[active]" />
         </div>
       </div>
       <TimelineBar />

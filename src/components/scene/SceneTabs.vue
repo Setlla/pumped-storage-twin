@@ -14,16 +14,8 @@ const tabs: { key: ViewKey; label: string; icon: string }[] = [
 
 const active = ref<ViewKey>('schematic')
 
-// 已挂载过的视图保持存活(keep-alive 思路用 v-show)
-const mounted = ref<Record<ViewKey, boolean>>({
-  panorama: false,
-  powerhouse: false,
-  schematic: true
-})
-
 function switchTo(key: ViewKey) {
   active.value = key
-  mounted.value[key] = true
 }
 
 const comps = shallowRef({
@@ -49,11 +41,7 @@ const comps = shallowRef({
     </div>
 
     <div class="view-stack">
-      <template v-for="t in tabs" :key="t.key">
-        <div v-show="active === t.key" class="view-pane">
-          <component :is="comps[t.key]" v-if="mounted[t.key]" />
-        </div>
-      </template>
+      <component :is="comps[active]" />
     </div>
   </div>
 </template>
