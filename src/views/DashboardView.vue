@@ -1,32 +1,41 @@
 <script setup lang="ts">
 import TopBar from '@/components/layout/TopBar.vue'
 import BottomBar from '@/components/layout/BottomBar.vue'
-import SceneTabs from '@/components/scene/SceneTabs.vue'
-import ReservoirPanel from '@/components/panels/ReservoirPanel.vue'
-import UnitStatusPanel from '@/components/panels/UnitStatusPanel.vue'
-import EnergyPanel from '@/components/panels/EnergyPanel.vue'
-import DispatchPanel from '@/components/panels/DispatchPanel.vue'
-import PowerCurveChart from '@/components/panels/PowerCurveChart.vue'
-import AlarmFeed from '@/components/panels/AlarmFeed.vue'
+import ConstructionView from './ConstructionView.vue'
+import OperationView from './OperationView.vue'
+import { useConstructionStore } from '@/stores/construction'
+
+const c = useConstructionStore()
 </script>
 
 <template>
   <div class="dashboard">
     <TopBar />
-    <div class="dashboard-body">
-      <div class="scene-area">
-        <SceneTabs />
-      </div>
-      <aside class="side-rail">
-        <ReservoirPanel />
-        <DispatchPanel />
-        <EnergyPanel />
-        <UnitStatusPanel />
-        <PowerCurveChart />
-        <AlarmFeed />
-      </aside>
+
+    <div class="phase-switch">
+      <button
+        class="ps-btn"
+        :class="{ active: c.phase === 'construction' }"
+        @click="c.setPhase('construction')"
+      >
+        🏗️ 建设期 · 土石方平衡
+      </button>
+      <button
+        class="ps-btn"
+        :class="{ active: c.phase === 'operation' }"
+        @click="c.setPhase('operation')"
+      >
+        ⚡ 运行期 · 削峰填谷
+      </button>
+      <span class="ps-note">
+        本工程计划 2030 年投运，当前处于建设阶段
+      </span>
     </div>
-    <BottomBar />
+
+    <ConstructionView v-if="c.phase === 'construction'" />
+    <OperationView v-else />
+
+    <BottomBar v-if="c.phase === 'operation'" />
   </div>
 </template>
 
@@ -40,26 +49,30 @@ import AlarmFeed from '@/components/panels/AlarmFeed.vue'
     radial-gradient(ellipse at 30% 0%, rgba(0, 212, 255, 0.08), transparent 60%),
     var(--bg-deep);
 }
-.dashboard-body {
-  flex: 1;
+.phase-switch {
   display: flex;
-  min-height: 0;
-  padding: 10px;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 0;
+  flex-shrink: 0;
 }
-.scene-area {
-  flex: 1;
-  position: relative;
+.ps-btn {
+  padding: 7px 18px;
+  font-size: 13px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  background: rgba(8, 18, 32, 0.6);
   border: 1px solid var(--border-line);
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: var(--shadow-glow);
+  border-radius: 5px;
+  transition: all 0.2s;
 }
-.side-rail {
-  width: 360px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
+.ps-btn:hover { color: var(--text-primary); border-color: var(--border-line-strong); }
+.ps-btn.active {
+  color: #061222;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--accent-cyan), #0099ff);
+  box-shadow: 0 0 14px rgba(0, 212, 255, 0.5);
 }
+.ps-note { margin-left: auto; font-size: 12px; color: var(--text-dim); }
 </style>

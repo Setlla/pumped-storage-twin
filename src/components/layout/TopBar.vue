@@ -3,8 +3,10 @@ import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { usePlantStore } from '@/stores/plant'
 import { PLANT_INFO } from '@/data/plantConfig'
 import { tierLabel, tierColor } from '@/data/dispatch'
+import { useConstructionStore } from '@/stores/construction'
 
 const plant = usePlantStore()
+const c = useConstructionStore()
 const now = ref(new Date())
 let timer = 0
 onMounted(() => {
@@ -49,7 +51,7 @@ const isDay = computed(() => plant.currentHour >= 6 && plant.currentHour < 18)
       </div>
     </div>
 
-    <div class="kpi-row">
+    <div class="kpi-row" v-if="c.phase === 'operation'">
       <div class="kpi">
         <div class="kpi-label">当前工况</div>
         <div class="kpi-value" :class="modeClass">{{ modeLabel }}</div>
@@ -78,12 +80,46 @@ const isDay = computed(() => plant.currentHour >= 6 && plant.currentHour < 18)
       </div>
     </div>
 
+    <div class="kpi-row" v-else>
+      <div class="kpi">
+        <div class="kpi-label">总体进度</div>
+        <div class="kpi-value" style="color: var(--accent-cyan)">
+          {{ c.overallProgress.toFixed(1) }}<span class="kpi-unit">%</span>
+        </div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">挖填平衡率</div>
+        <div class="kpi-value" style="color: var(--accent-green)">
+          {{ c.balanceRate.toFixed(0) }}<span class="kpi-unit">%</span>
+        </div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">开挖 / 填筑</div>
+        <div class="kpi-value">{{ c.cutPlan.toFixed(0) }} / {{ c.fillPlan.toFixed(0) }}<span class="kpi-unit">万m³</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">今日车次</div>
+        <div class="kpi-value">{{ c.tripsToday }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">边坡位移</div>
+        <div class="kpi-value">{{ c.slopeDisp.toFixed(1) }}<span class="kpi-unit">mm</span></div>
+      </div>
+    </div>
+
     <div class="clock-group">
-      <div class="sim-clock">
+      <div class="sim-clock" v-if="c.phase === 'operation'">
         <span class="day-icon">{{ isDay ? '☀️' : '🌙' }}</span>
         <span class="sim-time">{{ simClock }}</span>
         <span class="tier-badge" :style="{ color: tierColor(plant.currentTier), borderColor: tierColor(plant.currentTier) }">
           {{ tierLabel(plant.currentTier) }}
+        </span>
+      </div>
+      <div class="sim-clock" v-else>
+        <span class="day-icon">🏗️</span>
+        <span class="sim-time" style="font-size: 15px">建设期</span>
+        <span class="tier-badge" style="color: var(--accent-cyan); border-color: var(--accent-cyan)">
+          目标 2030 投运
         </span>
       </div>
       <div class="clock">{{ clock }}</div>
