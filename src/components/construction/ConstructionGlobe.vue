@@ -7,33 +7,30 @@ import { CESIUM_ION_TOKEN, HAS_ION } from '@/config/cesium'
 const container = ref<HTMLDivElement | null>(null)
 const c = useConstructionStore()
 let viewer: Cesium.Viewer | null = null
-let flowPhase = 0
-let truckPath: Cesium.Cartesian3[] = []
+let phase = 0
 
-// 真实经纬度场地布置(云台山宿城一带)
+// 真实坐标: 连云港连云区宿城街道 · 云台山(东北段近海), 约 119.42E 34.73N
 const SITE = {
-  upper: { lon: 119.3505, lat: 34.7262 }, // 上水库(山顶)
-  lower: { lon: 119.3508, lat: 34.7105 }, // 下水库(谷地)
-  powerhouse: { lon: 119.3506, lat: 34.7188 },
-  spoil: { lon: 119.3442, lat: 34.7150 }, // 弃渣场
-  borrow: { lon: 119.3572, lat: 34.7165 }, // 料场
-  switchyard: { lon: 119.3460, lat: 34.7120 }
+  upper: { lon: 119.4175, lat: 34.7285 },
+  lower: { lon: 119.4255, lat: 34.7175 },
+  powerhouse: { lon: 119.4210, lat: 34.7230 },
+  spoil: { lon: 119.4105, lat: 34.7240 },
+  borrow: { lon: 119.4310, lat: 34.7255 },
+  switchyard: { lon: 119.4180, lat: 34.7190 }
 }
-// 运输路线(上库→沿山而下→下库/坝, 途经弃渣场)
-const ROAD_LL: [number, number][] = [
-  [119.3505, 34.7262],
-  [119.3480, 34.7235],
-  [119.3455, 34.7200],
-  [119.3460, 34.7160],
-  [119.3490, 34.7130],
-  [119.3508, 34.7108]
+const ROAD_LL: number[] = [
+  119.4175, 34.7285, 119.4150, 34.7258, 119.4140, 34.7232,
+  119.4175, 34.7205, 119.4220, 34.7186, 119.4255, 34.7175
+]
+const ROAD2_LL: number[] = [
+  119.4175, 34.7285, 119.4140, 34.7268, 119.4108, 34.7242
 ]
 
-function circleDeg(lon: number, lat: number, radius: number, n = 40): number[] {
+function ring(lon: number, lat: number, rx: number, ry: number, n = 44): number[] {
   const out: number[] = []
-  const dLat = radius / 111320
-  const dLon = radius / (111320 * Math.cos((lat * Math.PI) / 180))
-  for (let i = 0; i < n; i++) {
+  const dLat = ry / 111320
+  const dLon = rx / (111320 * Math.cos((lat * Math.PI) / 180))
+  for (let i = 0; i <= n; i++) {
     const a = (i / n) * Math.PI * 2
     out.push(lon + Math.cos(a) * dLon, lat + Math.sin(a) * dLat)
   }
@@ -54,222 +51,155 @@ onMounted(async () => {
   })
   const scene = viewer.scene
   scene.globe.enableLighting = true
-  if (scene.skyAtmosphere) scene.skyAtmosphere.brightnessShift = -0.1
+  // 地形夸张, 增强山势观感
+  try { (scene as any).verticalExaggeration = 1.6 } catch (e) { /* older api */ }
+  if (scene.skyAtmosphere) scene.skyAtmosphere.brightnessShift = -0.05
 
-  // 卫星影像(Ion: Bing Aerial)
   if (HAS_ION) {
     try {
-      const layer = Cesium.ImageryLayer.fromProviderAsync(
-        Cesium.IonImageryProvider.fromAssetId(2), undefined
-      )
       scene.imageryLayers.removeAll()
-      scene.imageryLayers.add(layer)
-    } catch (e) { /* 影像加载失败时保留默认 */ }
+      scene.imageryLayers.add(
+        Cesium.ImageryLayer.fromProviderAsync(Cesium.IonImageryProvider.fromAssetId(2), undefined)
+      )
+    } catch (e) { /* keep default */ }
   }
 
-  await buildScene()
+  buildOverlay()
 
-  // 飞到场地
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(SITE.lower.lon + 0.012, SITE.lower.lat - 0.006, 2600),
+    destination: Cesium.Cartesian3.fromDegrees(SITE.lower.lon + 0.018, SITE.lower.lat - 0.012, 3200),
     orientation: {
-      heading: Cesium.Math.toRadians(320),
-      pitch: Cesium.Math.toRadians(-32),
+      heading: Cesium.Math.toRadians(315),
+      pitch: Cesium.Math.toRadians(-34),
       roll: 0
     },
-    duration: 2.5
+    duration: 2.6
   })
 
-  scene.preRender.addEventListener(() => {
-    flowPhase += c.playing ? 0.01 : 0.004
-  })
+  scene.preRender.addEventListener(() => { phase = (phase + (c.playing ? 0.0016 : 0.0006)) % 1 })
 })
 
-async function sampleHeights(lls: [number, number][]): Promise<number[]> {
-  if (!viewer || !HAS_ION) return lls.map(() => 0)
-  try {
-    const cartos = lls.map(([lon, lat]) => Cesium.Cartographic.fromDegrees(lon, lat))
-    await Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, cartos)
-    return cartos.map((c2) => c2.height)
-  } catch (e) {
-    return lls.map(() => 0)
-  }
-}
-
-
-function lerpAlong(path: Cesium.Cartesian3[], t: number): Cesium.Cartesian3 {
-  if (path.length < 2) return path[0] || Cesium.Cartesian3.ZERO
-  const seg = (path.length - 1) * Math.max(0, Math.min(0.9999, t))
-  const i = Math.floor(seg)
-  return Cesium.Cartesian3.lerp(path[i], path[i + 1], seg - i, new Cesium.Cartesian3())
-}
-
-async function buildScene() {
-  if (!viewer) return
-  const ds = new Cesium.CustomDataSource('construction')
-  viewer.dataSources.add(ds)
-
-  // 采样真实地形高程
-  const [upperH, lowerH, spoilH, borrowH, phH] = await sampleHeights([
-    [SITE.upper.lon, SITE.upper.lat],
-    [SITE.lower.lon, SITE.lower.lat],
-    [SITE.spoil.lon, SITE.spoil.lat],
-    [SITE.borrow.lon, SITE.borrow.lat],
-    [SITE.powerhouse.lon, SITE.powerhouse.lat]
-  ])
-  const roadH = await sampleHeights(ROAD_LL)
-  truckPath = ROAD_LL.map(([lon, lat], i) =>
-    Cesium.Cartesian3.fromDegrees(lon, lat, (roadH[i] || 0) + 4)
-  )
-
-  const damFull = 32
-  const upperFloor = upperH - 22
-
-  // 上水库三维水体(顶面随蓄水进度上升)
+// 贴地图斑(随地形起伏), 不再用漂浮实体
+function zone(
+  ds: Cesium.CustomDataSource, name: string, lon: number, lat: number,
+  rx: number, ry: number, fill: string, line: string
+) {
+  const pts = ring(lon, lat, rx, ry)
   ds.entities.add({
     polygon: {
-      hierarchy: new Cesium.PolygonHierarchy(
-        Cesium.Cartesian3.fromDegreesArray(circleDeg(SITE.upper.lon, SITE.upper.lat, 150))
-      ),
-      perPositionHeight: false,
-      height: new Cesium.CallbackProperty(
-        () => upperFloor + 2 + c.dam.progress * (damFull - 4), false
-      ),
-      material: Cesium.Color.fromCssColorString('#1fa8ff').withAlpha(0.7),
-      outline: true, outlineColor: Cesium.Color.fromCssColorString('#aee7ff')
+      hierarchy: Cesium.Cartesian3.fromDegreesArray(pts),
+      material: Cesium.Color.fromCssColorString(fill).withAlpha(0.45),
+      classificationType: Cesium.ClassificationType.TERRAIN
     }
   })
-  // 库盆开挖轮廓(随开挖进度显现的盆地边线)
-  ds.entities.add({
-    polygon: {
-      hierarchy: new Cesium.PolygonHierarchy(
-        Cesium.Cartesian3.fromDegreesArray(circleDeg(SITE.upper.lon, SITE.upper.lat, 165))
-      ),
-      height: upperFloor, extrudedHeight: upperH,
-      material: Cesium.Color.fromCssColorString('#6b5e44').withAlpha(0.0),
-      outline: true, outlineColor: Cesium.Color.fromCssColorString('#ffce5c').withAlpha(0.8)
-    }
-  })
-
-  // 面板堆石坝(上库下游缘, 高度随填筑进度)
-  const damCenter = { lon: SITE.upper.lon, lat: SITE.upper.lat - 0.0016 }
-  ds.entities.add({
-    position: new Cesium.CallbackPositionProperty(() =>
-      Cesium.Cartesian3.fromDegrees(
-        damCenter.lon, damCenter.lat,
-        (upperH - damFull) + (damFull * c.dam.progress) / 2
-      ), false),
-    box: {
-      dimensions: new Cesium.CallbackProperty(() =>
-        new Cesium.Cartesian3(300, 40, Math.max(1, damFull * c.dam.progress)), false),
-      material: Cesium.Color.fromCssColorString('#9aa0a8'),
-      outline: true, outlineColor: Cesium.Color.fromCssColorString('#00d4ff').withAlpha(0.5)
-    }
-  })
-
-  // 下水库水体
-  ds.entities.add({
-    polygon: {
-      hierarchy: new Cesium.PolygonHierarchy(
-        Cesium.Cartesian3.fromDegreesArray(circleDeg(SITE.lower.lon, SITE.lower.lat, 190))
-      ),
-      perPositionHeight: false,
-      height: lowerH + 1,
-      material: Cesium.Color.fromCssColorString('#1184e0').withAlpha(0.7),
-      outline: true, outlineColor: Cesium.Color.fromCssColorString('#9fd0ff')
-    }
-  })
-
-
-  // 运输道路(贴地)
   ds.entities.add({
     polyline: {
-      positions: Cesium.Cartesian3.fromDegreesArray(ROAD_LL.flat()),
-      width: 6, clampToGround: true,
-      material: new Cesium.PolylineOutlineMaterialProperty({
-        color: Cesium.Color.fromCssColorString('#caa23a').withAlpha(0.9),
-        outlineColor: Cesium.Color.fromCssColorString('#5a4a18'), outlineWidth: 1.5
+      positions: Cesium.Cartesian3.fromDegreesArray(pts),
+      width: 3, clampToGround: true,
+      material: new Cesium.PolylineGlowMaterialProperty({
+        glowPower: 0.35, color: Cesium.Color.fromCssColorString(line)
       })
     }
   })
+}
 
-  // 渣土车(沿路移动, 满载下山)
-  for (let i = 0; i < 8; i++) {
-    const base = i / 8
+
+function buildOverlay() {
+  if (!viewer) return
+  const ds = new Cesium.CustomDataSource('overlay')
+  viewer.dataSources.add(ds)
+
+  // 库区范围(贴地)
+  zone(ds, '上水库', SITE.upper.lon, SITE.upper.lat, 230, 180, '#16b6ff', '#aee7ff')
+  zone(ds, '下水库', SITE.lower.lon, SITE.lower.lat, 300, 220, '#1184e0', '#9fd0ff')
+  // 弃渣场 / 料场
+  zone(ds, '弃渣场', SITE.spoil.lon, SITE.spoil.lat, 160, 130, '#a78bfa', '#cdbcff')
+  zone(ds, '料场', SITE.borrow.lon, SITE.borrow.lat, 120, 100, '#ffce5c', '#ffe6a3')
+
+  // 大坝轴线(上库下游缘, 贴地粗线)
+  ds.entities.add({
+    polyline: {
+      positions: Cesium.Cartesian3.fromDegreesArray(
+        ring(SITE.upper.lon, SITE.upper.lat - 0.0014, 240, 30, 8).slice(0, 18)
+      ),
+      width: 8, clampToGround: true,
+      material: Cesium.Color.fromCssColorString('#d6dae0')
+    }
+  })
+
+  // 运输道路(贴地)
+  for (const road of [ROAD_LL, ROAD2_LL]) {
     ds.entities.add({
-      position: new Cesium.CallbackPositionProperty(() => {
-        let t = (base + flowPhase) % 1
-        return lerpAlong(truckPath, t)
-      }, false),
-      point: {
-        pixelSize: 9,
-        color: Cesium.Color.fromCssColorString('#ffc02a'),
-        outlineColor: Cesium.Color.fromCssColorString('#6a4e00'), outlineWidth: 1
+      polyline: {
+        positions: Cesium.Cartesian3.fromDegreesArray(road),
+        width: 5, clampToGround: true,
+        material: new Cesium.PolylineOutlineMaterialProperty({
+          color: Cesium.Color.fromCssColorString('#e0b43a').withAlpha(0.95),
+          outlineColor: Cesium.Color.fromCssColorString('#4a3a10'), outlineWidth: 1.5
+        })
       }
     })
   }
 
-  // 弃渣场(锥堆) + 料场
-  ds.entities.add({
-    position: Cesium.Cartesian3.fromDegrees(SITE.spoil.lon, SITE.spoil.lat, spoilH + 14),
-    cylinder: {
-      length: 28, topRadius: 4, bottomRadius: 60,
-      material: Cesium.Color.fromCssColorString('#8a7a5c').withAlpha(0.95)
-    }
-  })
-  ds.entities.add({
-    position: Cesium.Cartesian3.fromDegrees(SITE.borrow.lon, SITE.borrow.lat, borrowH + 8),
-    box: {
-      dimensions: new Cesium.Cartesian3(90, 70, 16),
-      material: Cesium.Color.fromCssColorString('#b89a5a').withAlpha(0.9)
-    }
-  })
+  // 渣土车(贴地移动点)
+  const roadCarts = [] as Cesium.Cartographic[]
+  for (let i = 0; i < ROAD_LL.length; i += 2) roadCarts.push(Cesium.Cartographic.fromDegrees(ROAD_LL[i], ROAD_LL[i + 1]))
+  for (let k = 0; k < 6; k++) {
+    const base = k / 6
+    ds.entities.add({
+      position: new Cesium.CallbackPositionProperty(() => {
+        const t = (base + phase * 4) % 1
+        const seg = (roadCarts.length - 1) * t
+        const i = Math.floor(seg)
+        const f = seg - i
+        const a = roadCarts[i], b = roadCarts[Math.min(i + 1, roadCarts.length - 1)]
+        return Cesium.Cartesian3.fromRadians(
+          a.longitude + (b.longitude - a.longitude) * f,
+          a.latitude + (b.latitude - a.latitude) * f, 0
+        )
+      }, false),
+      point: {
+        pixelSize: 8, color: Cesium.Color.fromCssColorString('#ffc02a'),
+        outlineColor: Cesium.Color.fromCssColorString('#5a3e00'), outlineWidth: 1,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: 0
+      }
+    })
+  }
 
-  // 地下厂房(半透明洞室)
-  ds.entities.add({
-    position: Cesium.Cartesian3.fromDegrees(SITE.powerhouse.lon, SITE.powerhouse.lat, phH - 40),
-    box: {
-      dimensions: new Cesium.Cartesian3(180, 60, 90),
-      material: Cesium.Color.fromCssColorString('#00d4ff').withAlpha(0.16),
-      outline: true, outlineColor: Cesium.Color.fromCssColorString('#00d4ff').withAlpha(0.6)
-    }
-  })
-
-  addLabel(ds, SITE.upper.lon, SITE.upper.lat, upperH + 40, '上水库 · 库盆开挖+面板堆石坝', '#00ff88')
-  addLabel(ds, SITE.lower.lon, SITE.lower.lat, lowerH + 30, '下水库', '#19a0ff')
-  addLabel(ds, SITE.powerhouse.lon, SITE.powerhouse.lat, phH + 30, '地下厂房', '#ff9d00')
-  addLabel(ds, SITE.spoil.lon, SITE.spoil.lat, spoilH + 40, '1#弃渣场', '#a78bfa')
-  addLabel(ds, SITE.borrow.lon, SITE.borrow.lat, borrowH + 28, '垫层料加工区', '#ffce5c')
+  // 标注(贴地)
+  label(ds, '上水库 · 库盆开挖+面板堆石坝', SITE.upper.lon, SITE.upper.lat, '#00ff88')
+  label(ds, '下水库', SITE.lower.lon, SITE.lower.lat, '#19a0ff')
+  label(ds, '地下厂房 1200MW', SITE.powerhouse.lon, SITE.powerhouse.lat, '#ff9d00')
+  label(ds, '1#弃渣场', SITE.spoil.lon, SITE.spoil.lat, '#a78bfa')
+  label(ds, '垫层料加工区', SITE.borrow.lon, SITE.borrow.lat, '#ffce5c')
 }
 
-function addLabel(ds: Cesium.CustomDataSource, lon: number, lat: number, h: number, text: string, color: string) {
+function label(ds: Cesium.CustomDataSource, text: string, lon: number, lat: number, color: string) {
   ds.entities.add({
-    position: Cesium.Cartesian3.fromDegrees(lon, lat, h),
-    point: { pixelSize: 7, color: Cesium.Color.fromCssColorString(color), disableDepthTestDistance: Number.POSITIVE_INFINITY },
+    position: Cesium.Cartesian3.fromDegrees(lon, lat, 0),
+    point: { pixelSize: 7, color: Cesium.Color.fromCssColorString(color), heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY },
     label: {
-      text, font: 'bold 13px sans-serif',
-      fillColor: Cesium.Color.WHITE,
+      text, font: 'bold 13px sans-serif', fillColor: Cesium.Color.WHITE,
       outlineColor: Cesium.Color.fromCssColorString('#02060c'), outlineWidth: 3,
       style: Cesium.LabelStyle.FILL_AND_OUTLINE,
       verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-      pixelOffset: new Cesium.Cartesian2(0, -10),
+      pixelOffset: new Cesium.Cartesian2(0, -12),
+      heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
       disableDepthTestDistance: Number.POSITIVE_INFINITY
     }
   })
 }
 
-onBeforeUnmount(() => {
-  viewer?.destroy()
-  viewer = null
-})
+onBeforeUnmount(() => { viewer?.destroy(); viewer = null })
 </script>
 
 <template>
   <div class="globe-wrap">
     <div ref="container" class="globe-canvas" />
     <div class="globe-note">
-      🛰️ 真实地形 + 卫星影像（Cesium World Terrain）｜ 施工要素按真实经纬度叠加<br />
-      照片级实景（路/树/现场细节）需接入项目无人机倾斜摄影成果（3D Tiles）
+      🛰️ 真实地形(Cesium World Terrain,地形增强1.6×)+ 卫星影像 · 连云港宿城/云台山<br />
+      施工要素以贴地 GIS 图斑表达(库区/弃渣/料场/道路);坐标为估算,待红线数据精确对位
     </div>
   </div>
 </template>
