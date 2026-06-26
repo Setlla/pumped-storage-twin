@@ -11,6 +11,7 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@mkkellogg/gaussian-splats-3d": "^0.4.7",
     "cesium": "^1.118.2",
     "echarts": "^5.5.0",
     "element-plus": "^2.7.6",
