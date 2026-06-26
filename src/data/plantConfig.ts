@@ -22,6 +22,10 @@ export const PLANT_INFO = {
   designHeadM: 380, // 额定水头 (估算)
   ratedFlowPerUnit: 88, // m³/s 单机额定流量
   ratedSpeedRpm: 333,
+  pumpEfficiency: 0.90, // 抽水(电→势能)效率
+  turbineEfficiency: 0.85, // 发电(势能→电)效率
+  // 往返综合效率 ≈ 0.90 × 0.85 ≈ 0.765 (抽蓄典型 75%~80%)
+  roundTripEfficiency: 0.765,
   plannedCommission: '2030',
   location: '江苏省连云港市连云区宿城街道 (云台山)'
 } as const

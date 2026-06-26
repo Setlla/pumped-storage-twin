@@ -7,9 +7,10 @@ const plant = usePlantStore()
 
 const gen = computed(() => plant.energyGenerated)
 const pump = computed(() => plant.energyPumped)
-const eff = computed(() => plant.roundTripEfficiency)
+const eff = computed(() => plant.designEfficiency)
+const recovery = computed(() => plant.actualRecovery)
 
-// 效率环形进度 (典型抽蓄综合效率 ~75%)
+// 效率环形进度 (典型抽蓄综合效率 ~76%)
 const effDash = computed(() => {
   const c = 2 * Math.PI * 26
   const p = Math.max(0, Math.min(100, eff.value)) / 100
@@ -41,7 +42,7 @@ function fmt(x: number) {
         </svg>
         <div class="eff-text">
           <b :style="{ color: effColor }">{{ eff.toFixed(0) }}<small>%</small></b>
-          <span>综合效率</span>
+          <span>设计综合效率</span>
         </div>
       </div>
       <div class="energy-stats">
@@ -54,8 +55,8 @@ function fmt(x: number) {
           <span class="es-val">{{ fmt(pump) }}<small>MWh</small></span>
         </div>
         <div class="es-row net">
-          <span class="es-dot" /><span class="es-label">净调节量</span>
-          <span class="es-val">{{ fmt(Math.abs(gen - pump)) }}<small>MWh</small></span>
+          <span class="es-dot" /><span class="es-label">实际回收率</span>
+          <span class="es-val">{{ recovery.toFixed(1) }}<small>%</small></span>
         </div>
       </div>
     </div>

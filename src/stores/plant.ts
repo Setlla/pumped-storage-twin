@@ -85,10 +85,15 @@ export const usePlantStore = defineStore('plant', () => {
     const r = lowerReservoir.value
     return ((r.levelM - r.deadLevelM) / (r.normalLevelM - r.deadLevelM)) * 100
   })
-  // 综合效率(往返效率): 发电量/抽水耗电量
-  const roundTripEfficiency = computed(() => {
+  // 设计综合效率(电站规格值, 抽蓄典型 ~76%): 作为 KPI 展示
+  const designEfficiency = computed(() => PLANT_INFO.roundTripEfficiency * 100)
+  // 实际能量回收率(累计上网/累计抽水), 物理上不应超过设计效率
+  const actualRecovery = computed(() => {
     if (energyPumped.value < 0.01) return 0
-    return (energyGenerated.value / energyPumped.value) * 100
+    return Math.min(
+      (energyGenerated.value / energyPumped.value) * 100,
+      designEfficiency.value
+    )
   })
   // 当前整点电价时段
   const currentHour = computed(() => Math.floor(simHour.value) % 24)
@@ -283,21 +288,18 @@ export const usePlantStore = defineStore('plant', () => {
     powerHistory.value.push({ ts: Date.now(), mw: totalPowerMW.value })
     if (powerHistory.value.length > 240) powerHistory.value.shift()
 
-    // 能量累计 (MWh): 功率(MW) * 时间(h). dt 为加速后的秒数
-    const hours = dt / 3600
-    units.value.forEach((u) => {
-      if (u.mode === 'generating') energyGenerated.value += u.powerMW * hours
-      else if (u.mode === 'pumping') energyPumped.value += Math.abs(u.powerMW) * hours
-    })
-
-    // 套利收益累计: 发电(卖电)按当前电价进账, 抽水(买电)按当前电价支出
-    // 时钟步进对应的小时数
+    // 能量累计 (MWh) 与套利收益: 统一使用日内时钟对应的小时数 dHour
     const dHour = dt * HOURS_PER_SEC
     const price = PRICE[Math.floor(simHour.value) % 24]
     units.value.forEach((u) => {
-      const mwh = Math.abs(u.powerMW) * dHour // MWh
-      if (u.mode === 'generating') revenue.value += mwh * 1000 * price
-      else if (u.mode === 'pumping') revenue.value -= mwh * 1000 * price
+      const mwh = Math.abs(u.powerMW) * dHour // 该步电量 MWh
+      if (u.mode === 'generating') {
+        energyGenerated.value += u.powerMW * dHour // 上网电量
+        revenue.value += mwh * 1000 * price // 卖电进账
+      } else if (u.mode === 'pumping') {
+        energyPumped.value += mwh // 抽水耗电量
+        revenue.value -= mwh * 1000 * price // 买电支出
+      }
     })
 
     // 简单越限告警
@@ -341,7 +343,8 @@ export const usePlantStore = defineStore('plant', () => {
     netHeadM,
     upperFillPct,
     lowerFillPct,
-    roundTripEfficiency,
+    designEfficiency,
+    actualRecovery,
     currentHour,
     currentTier,
     currentPrice,

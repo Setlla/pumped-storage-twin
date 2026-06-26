@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from 'vue'
+import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { usePlantStore } from '@/stores/plant'
+import IntroSplash from '@/components/layout/IntroSplash.vue'
 
 const plant = usePlantStore()
+const showSplash = ref(true)
 
 let lastTs = 0
 let rafId = 0
@@ -23,5 +25,6 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <IntroSplash v-if="showSplash" @done="showSplash = false" />
   <router-view />
 </template>

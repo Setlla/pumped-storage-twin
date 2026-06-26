@@ -13,16 +13,15 @@ let headTunnel: Cesium.Entity | null = null
 let tailTunnel: Cesium.Entity | null = null
 let flowPhase = 0
 
-onMounted(() => {
+onMounted(async () => {
   if (!container.value) return
 
-  // 使用 Cesium 默认 Ion token (demo)
-  Cesium.Ion.defaultAccessToken =
-    import.meta.env.VITE_CESIUM_ION_TOKEN ||
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0YjUwNjRhMC00ZTk5LTRkNTYtYWI2Ni02NDdhZDk1MzllMDQiLCJpZCI6MjU5LCJpYXQiOjE2ODk3NTk0MDB9.demo-token-placeholder'
+  // 仅当提供了真实 Ion token(长 JWT)时才启用 Ion 的世界地形/影像;
+  // 否则降级为 OpenStreetMap 影像 + 椭球地形, 保证无 token 也能开箱运行.
+  const ionToken = import.meta.env.VITE_CESIUM_ION_TOKEN
+  const hasIon = !!ionToken && ionToken.length > 60
 
-  viewer = new Cesium.Viewer(container.value, {
-    terrain: Cesium.Terrain.fromWorldTerrain(),
+  const viewerOptions: Cesium.Viewer.ConstructorOptions = {
     baseLayerPicker: false,
     geocoder: false,
     homeButton: false,
@@ -34,7 +33,21 @@ onMounted(() => {
     selectionIndicator: false,
     infoBox: false,
     creditContainer: document.createElement('div')
-  })
+  }
+
+  if (hasIon) {
+    Cesium.Ion.defaultAccessToken = ionToken as string
+    viewerOptions.terrain = Cesium.Terrain.fromWorldTerrain()
+  } else {
+    // 无 token: 用开放街图瓦片做底图, 默认椭球地形(不依赖 Ion)
+    viewerOptions.baseLayer = new Cesium.ImageryLayer(
+      new Cesium.OpenStreetMapImageryProvider({
+        url: 'https://tile.openstreetmap.org/'
+      })
+    )
+  }
+
+  viewer = new Cesium.Viewer(container.value, viewerOptions)
 
   // 暗色大气
   const sky = viewer.scene.skyAtmosphere
@@ -311,12 +324,30 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="container" class="cesium-container" />
+  <div ref="container" class="cesium-container">
+    <div class="cesium-note">
+      📍 云台山 · 宿城街道 ｜ 底图：OpenStreetMap（配置 Cesium Ion token 后可启用卫星影像+真实地形）
+    </div>
+  </div>
 </template>
 
 <style scoped>
 .cesium-container {
   width: 100%;
   height: 100%;
+  position: relative;
+}
+.cesium-note {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 5;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: rgba(8, 18, 32, 0.7);
+  border: 1px solid var(--border-line);
+  padding: 5px 10px;
+  border-radius: 4px;
+  pointer-events: none;
 }
 </style>
