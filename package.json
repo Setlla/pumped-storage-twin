@@ -1,0 +1,30 @@
+{
+  "name": "pumped-storage-twin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "江苏连云港抽水蓄能电站 数字孪生前端 (Vue3 + Cesium + Three.js)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview --port 5173",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "cesium": "^1.118.2",
+    "echarts": "^5.5.0",
+    "element-plus": "^2.7.6",
+    "pinia": "^2.1.7",
+    "three": "^0.165.0",
+    "vue": "^3.4.31",
+    "vue-router": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.165.0",
+    "@vitejs/plugin-vue": "^5.0.5",
+    "typescript": "^5.4.5",
+    "vite": "^5.3.2",
+    "vite-plugin-cesium": "^1.2.22",
+    "vue-tsc": "^2.0.24"
+  }
+}
