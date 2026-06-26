@@ -5,6 +5,7 @@ import SceneTabs from '@/components/scene/SceneTabs.vue'
 import ReservoirPanel from '@/components/panels/ReservoirPanel.vue'
 import UnitStatusPanel from '@/components/panels/UnitStatusPanel.vue'
 import EnergyPanel from '@/components/panels/EnergyPanel.vue'
+import DispatchPanel from '@/components/panels/DispatchPanel.vue'
 import PowerCurveChart from '@/components/panels/PowerCurveChart.vue'
 import AlarmFeed from '@/components/panels/AlarmFeed.vue'
 </script>
@@ -18,6 +19,7 @@ import AlarmFeed from '@/components/panels/AlarmFeed.vue'
       </div>
       <aside class="side-rail">
         <ReservoirPanel />
+        <DispatchPanel />
         <EnergyPanel />
         <UnitStatusPanel />
         <PowerCurveChart />

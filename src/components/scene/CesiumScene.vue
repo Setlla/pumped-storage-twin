@@ -37,9 +37,12 @@ onMounted(() => {
   })
 
   // 暗色大气
-  viewer.scene.skyAtmosphere.hueShift = -0.02
-  viewer.scene.skyAtmosphere.saturationShift = -0.1
-  viewer.scene.skyAtmosphere.brightnessShift = -0.2
+  const sky = viewer.scene.skyAtmosphere
+  if (sky) {
+    sky.hueShift = -0.02
+    sky.saturationShift = -0.1
+    sky.brightnessShift = -0.2
+  }
   viewer.scene.fog.density = 0.0005
   viewer.scene.globe.enableLighting = true
 

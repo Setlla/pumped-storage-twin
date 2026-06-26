@@ -2,6 +2,7 @@
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { usePlantStore } from '@/stores/plant'
 import { PLANT_INFO } from '@/data/plantConfig'
+import { tierLabel, tierColor } from '@/data/dispatch'
 
 const plant = usePlantStore()
 const now = ref(new Date())
@@ -26,6 +27,13 @@ const modeClass = computed(() => `mode-${plant.globalMode}`)
 const activeAlarms = computed(() =>
   plant.alarms.filter((a) => a.level !== 'info').length
 )
+
+const simClock = computed(() => {
+  const h = Math.floor(plant.simHour)
+  const m = Math.floor((plant.simHour - h) * 60)
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+})
+const isDay = computed(() => plant.currentHour >= 6 && plant.currentHour < 18)
 </script>
 
 <template>
@@ -70,7 +78,16 @@ const activeAlarms = computed(() =>
       </div>
     </div>
 
-    <div class="clock">{{ clock }}</div>
+    <div class="clock-group">
+      <div class="sim-clock">
+        <span class="day-icon">{{ isDay ? '☀️' : '🌙' }}</span>
+        <span class="sim-time">{{ simClock }}</span>
+        <span class="tier-badge" :style="{ color: tierColor(plant.currentTier), borderColor: tierColor(plant.currentTier) }">
+          {{ tierLabel(plant.currentTier) }}
+        </span>
+      </div>
+      <div class="clock">{{ clock }}</div>
+    </div>
   </header>
 </template>
 
@@ -139,5 +156,17 @@ const activeAlarms = computed(() =>
   font-size: 13px; color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
   letter-spacing: 1px;
+}
+.clock-group { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.sim-clock { display: flex; align-items: center; gap: 8px; }
+.day-icon { font-size: 15px; }
+.sim-time {
+  font-size: 20px; font-weight: 700; color: var(--accent-cyan);
+  font-variant-numeric: tabular-nums; letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+}
+.tier-badge {
+  font-size: 11px; font-weight: 600; padding: 1px 7px;
+  border: 1px solid; border-radius: 3px; letter-spacing: 1px;
 }
 </style>

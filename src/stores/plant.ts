@@ -5,6 +5,7 @@ import {
   UPPER_RES,
   LOWER_RES
 } from '@/data/plantConfig'
+import { plannedDispatch, priceTier, PRICE } from '@/data/dispatch'
 import type {
   UnitState,
   ReservoirState,
@@ -14,6 +15,7 @@ import type {
 
 const RES_INIT_FRACTION = 0.7 // 初始水位处于 70% 活库容
 const SIM_FLOW_AMP = 60 // 仿真加速倍数(让水位变化在演示时间尺度可见)
+const HOURS_PER_SEC = 0.2 // 1 实际秒 = 0.2 仿真小时(再乘 simSpeed)
 
 function makeInitialUnit(id: number): UnitState {
   return {
@@ -60,6 +62,10 @@ export const usePlantStore = defineStore('plant', () => {
   const energyPumped = ref(0)
   // 当前选中机组 (用于 3D 场景联动)
   const selectedUnitId = ref<number | null>(null)
+  // 调度: 仿真日内时钟(小时, 0~24 浮点), 自动调度开关, 套利收益(元)
+  const simHour = ref(2) // 从凌晨2点(抽水)开始演示
+  const autoDispatch = ref(true)
+  const revenue = ref(0)
 
   // ---------------- 计算 ----------------
   const totalPowerMW = computed(() =>
@@ -84,10 +90,15 @@ export const usePlantStore = defineStore('plant', () => {
     if (energyPumped.value < 0.01) return 0
     return (energyGenerated.value / energyPumped.value) * 100
   })
+  // 当前整点电价时段
+  const currentHour = computed(() => Math.floor(simHour.value) % 24)
+  const currentTier = computed(() => priceTier(currentHour.value))
+  const currentPrice = computed(() => PRICE[currentHour.value])
 
 
   // ---------------- 操作 ----------------
   function setGlobalMode(mode: GlobalMode) {
+    autoDispatch.value = false // 手动操作时退出自动调度
     globalMode.value = mode
     units.value.forEach((u) => {
       if (u.hasAlarm) return
@@ -147,6 +158,53 @@ export const usePlantStore = defineStore('plant', () => {
     selectedUnitId.value = id
   }
 
+  function setAutoDispatch(on: boolean) {
+    autoDispatch.value = on
+    pushAlarm('info', on ? '自动调度已启用 · 跟踪电网削峰填谷' : '切换为手动控制')
+  }
+
+  // 推进日内时钟, 自动调度按时段切换工况
+  let lastDispatchHour = -1
+  function advanceClock(dt: number) {
+    simHour.value = (simHour.value + dt * HOURS_PER_SEC) % 24
+    if (!autoDispatch.value) return
+    const hour = Math.floor(simHour.value)
+    if (hour === lastDispatchHour) return
+    lastDispatchHour = hour
+    applyDispatch(hour)
+  }
+
+  // 应用某小时的计划调度
+  function applyDispatch(hour: number) {
+    const plan = plannedDispatch(hour)
+    // 库容安全约束: 上库满则停抽, 上库空则停发
+    let mode = plan.mode
+    if (mode === 'pump' && upperFillPct.value > 98) mode = 'idle'
+    if (mode === 'generate' && upperFillPct.value < 3) mode = 'idle'
+
+    const gm: GlobalMode = mode === 'pump' ? 'pumping' : mode === 'generate' ? 'generating' : 'idle'
+    globalMode.value = gm
+
+    units.value.forEach((u, idx) => {
+      if (u.hasAlarm) return
+      const shouldRun = idx < plan.units
+      if (gm === 'idle' || !shouldRun) {
+        u.mode = 'stopped'
+        u.targetMW = 0
+      } else if (gm === 'pumping') {
+        u.mode = 'pumping'
+        u.targetMW = -PLANT_INFO.unitCapacityMW
+      } else {
+        u.mode = 'generating'
+        u.targetMW = PLANT_INFO.unitCapacityMW
+      }
+    })
+    const tier = priceTier(hour)
+    const tierName = tier === 'valley' ? '低谷' : tier === 'sharp' ? '尖峰' : tier === 'peak' ? '高峰' : '平段'
+    const act = gm === 'pumping' ? '抽水蓄能' : gm === 'generating' ? `${plan.units}机发电` : '停机待机'
+    pushAlarm('info', `${String(hour).padStart(2, '0')}:00 ${tierName}时段 → ${act}`)
+  }
+
 
   function pushAlarm(level: AlarmRecord['level'], message: string, unitId?: number) {
     alarms.value.unshift({
@@ -163,6 +221,9 @@ export const usePlantStore = defineStore('plant', () => {
   function tick(dtSec: number) {
     if (!simRunning.value) return
     const dt = dtSec * simSpeed.value
+
+    // 推进日内时钟: 仿真中 1 实际秒 ≈ 0.2 小时(可被 simSpeed 放大)
+    advanceClock(dt)
 
     // 更新机组动态
     let netFlow = 0 // m³/s, 正=上库进水(发电时下→上为负, 抽水时下→上为正实际上是反向)
@@ -229,6 +290,16 @@ export const usePlantStore = defineStore('plant', () => {
       else if (u.mode === 'pumping') energyPumped.value += Math.abs(u.powerMW) * hours
     })
 
+    // 套利收益累计: 发电(卖电)按当前电价进账, 抽水(买电)按当前电价支出
+    // 时钟步进对应的小时数
+    const dHour = dt * HOURS_PER_SEC
+    const price = PRICE[Math.floor(simHour.value) % 24]
+    units.value.forEach((u) => {
+      const mwh = Math.abs(u.powerMW) * dHour // MWh
+      if (u.mode === 'generating') revenue.value += mwh * 1000 * price
+      else if (u.mode === 'pumping') revenue.value -= mwh * 1000 * price
+    })
+
     // 简单越限告警
     units.value.forEach((u) => {
       if (u.bearingTemp > 75 && !u.hasAlarm) {
@@ -262,17 +333,24 @@ export const usePlantStore = defineStore('plant', () => {
     energyGenerated,
     energyPumped,
     selectedUnitId,
+    simHour,
+    autoDispatch,
+    revenue,
     totalPowerMW,
     runningUnitCount,
     netHeadM,
     upperFillPct,
     lowerFillPct,
     roundTripEfficiency,
+    currentHour,
+    currentTier,
+    currentPrice,
     setGlobalMode,
     toggleUnit,
     injectFault,
     clearFault,
     selectUnit,
+    setAutoDispatch,
     tick
   }
 })
