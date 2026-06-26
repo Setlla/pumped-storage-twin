@@ -1,0 +1,14 @@
+{
+  "name": "psts-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "抽蓄土石方平衡 · 轻量数据接入与治理底座(Express + JSON 文件存储)",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}

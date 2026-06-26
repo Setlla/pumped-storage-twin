@@ -11,3 +11,8 @@ dist-ssr
 .env.local
 .env.*.local
 coverage
+
+
+# 后端运行时数据 / 依赖
+server/node_modules
+server/data.json

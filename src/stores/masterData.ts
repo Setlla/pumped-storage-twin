@@ -72,6 +72,13 @@ export const useMasterDataStore = defineStore('masterData', () => {
     yards.value = d.yards; roads.value = d.roads; vehicles.value = d.vehicles; equips.value = d.equips
     try { localStorage.removeItem(LS) } catch {}
   }
+  function replaceAll(p: { yards?: Yard[]; roads?: Road[]; vehicles?: Vehicle[]; equips?: Equip[] }) {
+    if (p.yards) yards.value = p.yards
+    if (p.roads) roads.value = p.roads
+    if (p.vehicles) vehicles.value = p.vehicles
+    if (p.equips) equips.value = p.equips
+    persist()
+  }
 
-  return { yards, roads, vehicles, equips, save, remove, reset }
+  return { yards, roads, vehicles, equips, save, remove, reset, replaceAll }
 })

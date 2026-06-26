@@ -15,6 +15,7 @@ import ProgressPanel from '@/components/construction/ProgressPanel.vue'
 import FleetPanel from '@/components/construction/FleetPanel.vue'
 import DataImportBar from '@/components/construction/DataImportBar.vue'
 import ReportBar from '@/components/construction/ReportBar.vue'
+import BackendBar from '@/components/construction/BackendBar.vue'
 
 type Key = 'globe' | 'splat' | 'site' | 'spacetime' | 'flow' | 'alloc' | 'dev' | 'alert' | 'master'
 const tabs: { key: Key; label: string; icon: string }[] = [
@@ -65,6 +66,7 @@ const comps = shallowRef({
       <TimelineBar />
     </div>
     <aside class="side-rail">
+      <BackendBar />
       <DataImportBar />
       <ReportBar />
       <EarthworkBalancePanel />
