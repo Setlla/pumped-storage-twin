@@ -11,6 +11,7 @@ const c = useConstructionStore()
 <template>
   <div class="dashboard">
     <TopBar />
+    <dv-decoration-2 style="width:100%;height:4px;" />
 
     <div class="phase-switch">
       <button

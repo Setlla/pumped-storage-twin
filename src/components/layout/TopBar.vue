@@ -4,6 +4,7 @@ import { usePlantStore } from '@/stores/plant'
 import { PLANT_INFO } from '@/data/plantConfig'
 import { tierLabel, tierColor } from '@/data/dispatch'
 import { useConstructionStore } from '@/stores/construction'
+import CountTo from '@/components/common/CountTo.vue'
 
 const plant = usePlantStore()
 const c = useConstructionStore()
@@ -59,7 +60,7 @@ const isDay = computed(() => plant.currentHour >= 6 && plant.currentHour < 18)
       <div class="kpi">
         <div class="kpi-label">总出力</div>
         <div class="kpi-value">
-          {{ plant.totalPowerMW.toFixed(0) }}
+          <CountTo :value="plant.totalPowerMW" :decimals="0" />
           <span class="kpi-unit">MW</span>
         </div>
       </div>
@@ -84,13 +85,13 @@ const isDay = computed(() => plant.currentHour >= 6 && plant.currentHour < 18)
       <div class="kpi">
         <div class="kpi-label">总体进度</div>
         <div class="kpi-value" style="color: var(--accent-cyan)">
-          {{ c.overallProgress.toFixed(1) }}<span class="kpi-unit">%</span>
+          <CountTo :value="c.overallProgress" :decimals="1" /><span class="kpi-unit">%</span>
         </div>
       </div>
       <div class="kpi">
         <div class="kpi-label">挖填平衡率</div>
         <div class="kpi-value" style="color: var(--accent-green)">
-          {{ c.balanceRate.toFixed(0) }}<span class="kpi-unit">%</span>
+          <CountTo :value="c.balanceRate" :decimals="0" /><span class="kpi-unit">%</span>
         </div>
       </div>
       <div class="kpi">
@@ -99,7 +100,7 @@ const isDay = computed(() => plant.currentHour >= 6 && plant.currentHour < 18)
       </div>
       <div class="kpi">
         <div class="kpi-label">今日车次</div>
-        <div class="kpi-value">{{ c.tripsToday }}</div>
+        <div class="kpi-value"><CountTo :value="c.tripsToday" :decimals="0" /></div>
       </div>
       <div class="kpi">
         <div class="kpi-label">边坡位移</div>

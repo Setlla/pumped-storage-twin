@@ -11,9 +11,12 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@kjgl77/datav-vue3": "^1.7.4",
     "@mkkellogg/gaussian-splats-3d": "^0.4.7",
     "cesium": "^1.118.2",
+    "countup.js": "^2.10.0",
     "echarts": "^5.5.0",
+    "echarts-liquidfill": "^3.1.0",
     "element-plus": "^2.7.6",
     "pinia": "^2.1.7",
     "three": "^0.165.0",
