@@ -2,17 +2,35 @@
 import { computed } from 'vue'
 import { useConstructionStore } from '@/stores/construction'
 import { useAllocationConfig } from '@/stores/allocationConfig'
-import { computeAllocation, type HaulMode } from '@/logic/allocation'
+import { computeAllocation, STRATEGY_LABEL, type HaulMode, type Strategy } from '@/logic/allocation'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import '@/styles/panel.css'
 
 const c = useConstructionStore()
 const cfg = useAllocationConfig()
-const result = computed(() => computeAllocation(c.cutZones, c.fillZones, {
-  truckCapacityM3: cfg.truckCapacityM3,
-  costPerKmPerTrip: cfg.costPerKmPerTrip,
-  stockpileLeadMonth: cfg.stockpileLeadMonth
-}))
+
+function run(strategy: Strategy) {
+  return computeAllocation(c.cutZones, c.fillZones, {
+    truckCapacityM3: cfg.truckCapacityM3,
+    costPerKmPerTrip: cfg.costPerKmPerTrip,
+    stockpileLeadMonth: cfg.stockpileLeadMonth,
+    strategy
+  })
+}
+const result = computed(() => run(cfg.strategy))
+const strategies: Strategy[] = ['distance', 'cost', 'utilization']
+const compare = computed(() => strategies.map((s) => ({ s, label: STRATEGY_LABEL[s], kpi: run(s).kpi })))
 function onCfg() { cfg.persist() }
+
+async function saveCurrent() {
+  try {
+    const { value } = await ElMessageBox.prompt('方案名称', '保存调配方案', {
+      inputValue: `${STRATEGY_LABEL[cfg.strategy]}-${c.monthText}`, confirmButtonText: '保存', cancelButtonText: '取消'
+    })
+    cfg.saveScheme(value || STRATEGY_LABEL[cfg.strategy], result.value.kpi)
+    ElMessage.success('方案已保存')
+  } catch {}
+}
 
 const modeLabel: Record<HaulMode, string> = {
   direct: '直接上坝', stockpile: '经中转', spoil: '弃渣', borrow: '外购'
@@ -31,6 +49,20 @@ const modeCls: Record<HaulMode, string> = {
       <label>运输单价<input type="number" v-model.number="cfg.costPerKmPerTrip" @change="onCfg" /><i>元/车·km</i></label>
       <label>中转判定提前期<input type="number" v-model.number="cfg.stockpileLeadMonth" @change="onCfg" /><i>月</i></label>
       <button class="cfg-reset" @click="cfg.reset()">恢复默认</button>
+    </div>
+
+    <!-- 多目标方案对比 -->
+    <div class="scheme-bar">
+      <span class="cfg-t">优化目标</span>
+      <button
+        v-for="cm in compare" :key="cm.s"
+        class="sc-btn" :class="{ on: cfg.strategy === cm.s }"
+        @click="cfg.setStrategy(cm.s)"
+      >
+        <div class="sc-label">{{ cm.label }}</div>
+        <div class="sc-kpi">运距 {{ cm.kpi.avgHaulKm }}km · 成本 {{ cm.kpi.totalCostWan }}万 · 中转 {{ cm.kpi.stockpileM3 }}</div>
+      </button>
+      <button class="cfg-reset" @click="saveCurrent">保存方案</button>
     </div>
 
     <!-- KPI -->
@@ -97,6 +129,12 @@ const modeCls: Record<HaulMode, string> = {
 .cfg-bar input { width: 64px; background: rgba(0,30,60,0.4); border: 1px solid var(--border-line); border-radius: 4px; color: var(--text-primary); padding: 4px 6px; font-size: 12px; }
 .cfg-bar i { font-style: normal; color: var(--text-dim); font-size: 11px; }
 .cfg-reset { margin-left: auto; padding: 4px 10px; font-size: 11px; border: 1px solid var(--border-line); border-radius: 4px; background: transparent; color: var(--text-secondary); cursor: pointer; }
+.scheme-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg-panel); border: 1px solid var(--border-line); border-radius: 6px; flex-shrink: 0; }
+.sc-btn { flex: 1; text-align: left; padding: 6px 12px; border: 1px solid var(--border-line); border-radius: 5px; background: transparent; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; }
+.sc-btn.on { border-color: var(--accent-cyan); background: rgba(0,212,255,0.1); }
+.sc-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.sc-btn.on .sc-label { color: var(--accent-cyan); }
+.sc-kpi { font-size: 10px; color: var(--text-secondary); margin-top: 2px; font-variant-numeric: tabular-nums; }
 .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; flex-shrink: 0; }
 .kpi { background: var(--bg-panel); border: 1px solid var(--border-line); border-radius: 6px; padding: 10px 12px; text-align: center; }
 .kv { font-size: 22px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }

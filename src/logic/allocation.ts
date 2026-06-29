@@ -56,9 +56,13 @@ function cost(m3Wan: number, km: number): number {
 }
 
 // 可配置运输参数(由调配引擎入参覆盖)
-let P = { cap: HAUL_PARAMS.truckCapacityM3, unit: HAUL_PARAMS.costPerKmPerTrip, lead: 6 }
+let P = { cap: HAUL_PARAMS.truckCapacityM3, unit: HAUL_PARAMS.costPerKmPerTrip, lead: 6, strategy: 'distance' as Strategy }
 
-export interface AllocParams { truckCapacityM3: number; costPerKmPerTrip: number; stockpileLeadMonth: number }
+export type Strategy = 'distance' | 'cost' | 'utilization'
+export const STRATEGY_LABEL: Record<Strategy, string> = {
+  distance: '距离最优', cost: '成本最优', utilization: '利用率最优'
+}
+export interface AllocParams { truckCapacityM3: number; costPerKmPerTrip: number; stockpileLeadMonth: number; strategy: Strategy }
 
 
 export function computeAllocation(
@@ -69,7 +73,8 @@ export function computeAllocation(
   P = {
     cap: params?.truckCapacityM3 || HAUL_PARAMS.truckCapacityM3,
     unit: params?.costPerKmPerTrip || HAUL_PARAMS.costPerKmPerTrip,
-    lead: params?.stockpileLeadMonth ?? 6
+    lead: params?.stockpileLeadMonth ?? 6,
+    strategy: params?.strategy || 'distance'
   }
   const allocations: Allocation[] = []
   const warnings: Warning[] = []
@@ -114,10 +119,19 @@ export function computeAllocation(
       return
     }
 
-    // 候选料源: 料质相容, 按运距升序
-    const cands = supplies
-      .filter((s) => accept.includes(s.material) && s.avail > 0.5)
-      .sort((a, b) => haulDistance(a.id, d.id) - haulDistance(b.id, d.id))
+    // 候选料源: 料质相容; 按策略排序
+    const cands = supplies.filter((s) => accept.includes(s.material) && s.avail > 0.5)
+    cands.sort((a, b) => {
+      const da = haulDistance(a.id, d.id), db = haulDistance(b.id, d.id)
+      if (P.strategy === 'utilization') return b.avail - a.avail // 优先消化大料源, 降弃方
+      if (P.strategy === 'cost') {
+        // 成本最优: 规避中转双倍运距(开挖远早于填筑者降权), 再比运距
+        const pa = a.end < d.startMonth ? 1 : 0, pb = b.end < d.startMonth ? 1 : 0
+        if (pa !== pb) return pa - pb
+        return da - db
+      }
+      return da - db // 距离最优
+    })
 
     for (const s of cands) {
       if (need <= 0.5) break
