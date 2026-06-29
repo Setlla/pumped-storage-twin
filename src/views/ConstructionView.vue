@@ -3,33 +3,20 @@ import { ref, shallowRef, markRaw } from 'vue'
 import ConstructionGlobe from '@/components/construction/ConstructionGlobe.vue'
 import SpaceTimeChart from '@/components/construction/SpaceTimeChart.vue'
 import EarthworkFlow from '@/components/construction/EarthworkFlow.vue'
-import AllocationPanel from '@/components/construction/AllocationPanel.vue'
 import DeviationPanel from '@/components/construction/DeviationPanel.vue'
-import AlertCenter from '@/components/construction/AlertCenter.vue'
 import ForecastPanel from '@/components/construction/ForecastPanel.vue'
-import TransportPanel from '@/components/construction/TransportPanel.vue'
-import MasterDataPanel from '@/components/construction/MasterDataPanel.vue'
-import GovernancePanel from '@/components/construction/GovernancePanel.vue'
 import TimelineBar from '@/components/construction/TimelineBar.vue'
 import EarthworkBalancePanel from '@/components/construction/EarthworkBalancePanel.vue'
 import ProgressPanel from '@/components/construction/ProgressPanel.vue'
 import FleetPanel from '@/components/construction/FleetPanel.vue'
-import DataImportBar from '@/components/construction/DataImportBar.vue'
-import ReportBar from '@/components/construction/ReportBar.vue'
-import BackendBar from '@/components/construction/BackendBar.vue'
 
-type Key = 'globe' | 'spacetime' | 'flow' | 'alloc' | 'forecast' | 'transport' | 'dev' | 'alert' | 'master' | 'gov'
+type Key = 'globe' | 'spacetime' | 'flow' | 'forecast' | 'dev'
 const tabs: { key: Key; label: string; icon: string }[] = [
   { key: 'globe', label: '实景地形', icon: '🛰️' },
   { key: 'spacetime', label: '时空平衡', icon: '📈' },
   { key: 'flow', label: '调配流向', icon: '🔀' },
-  { key: 'alloc', label: '智能调配', icon: '🧮' },
   { key: 'forecast', label: '进度预判', icon: '🔮' },
-  { key: 'transport', label: '运输监管', icon: '🚛' },
-  { key: 'dev', label: '设计vs实测', icon: '📐' },
-  { key: 'alert', label: '预警中心', icon: '🚨' },
-  { key: 'master', label: '基础资料', icon: '🗂️' },
-  { key: 'gov', label: '数据治理', icon: '🛡️' }
+  { key: 'dev', label: '设计vs实测', icon: '📐' }
 ]
 const active = ref<Key>('globe')
 function switchTo(k: Key) {
@@ -39,13 +26,8 @@ const comps = shallowRef({
   globe: markRaw(ConstructionGlobe),
   spacetime: markRaw(SpaceTimeChart),
   flow: markRaw(EarthworkFlow),
-  alloc: markRaw(AllocationPanel),
   forecast: markRaw(ForecastPanel),
-  transport: markRaw(TransportPanel),
-  dev: markRaw(DeviationPanel),
-  alert: markRaw(AlertCenter),
-  master: markRaw(MasterDataPanel),
-  gov: markRaw(GovernancePanel)
+  dev: markRaw(DeviationPanel)
 })
 </script>
 
@@ -69,9 +51,6 @@ const comps = shallowRef({
       <TimelineBar />
     </div>
     <aside class="side-rail">
-      <BackendBar />
-      <DataImportBar />
-      <ReportBar />
       <EarthworkBalancePanel />
       <ProgressPanel />
       <FleetPanel />

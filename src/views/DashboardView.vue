@@ -31,6 +31,7 @@ const c = useConstructionStore()
       <span class="ps-note">
         本工程计划 2030 年投运，当前处于建设阶段
       </span>
+      <router-link to="/admin" class="ps-admin">🛠️ 后台管理</router-link>
     </div>
 
     <ConstructionView v-if="c.phase === 'construction'" />
@@ -76,4 +77,10 @@ const c = useConstructionStore()
   box-shadow: 0 0 14px rgba(0, 212, 255, 0.5);
 }
 .ps-note { margin-left: auto; font-size: 12px; color: var(--text-dim); }
+.ps-admin {
+  margin-left: 14px; font-size: 13px; text-decoration: none;
+  color: var(--accent-cyan); padding: 7px 14px;
+  border: 1px solid var(--border-line-strong); border-radius: 5px;
+}
+.ps-admin:hover { background: rgba(0, 212, 255, 0.1); }
 </style>
