@@ -33,6 +33,28 @@ const ds: Record<string, Cesium.CustomDataSource> = {}
 // 点选要素
 const selectedKey = ref<string | null>(null)
 const baseName = basemapName()
+const heat = ref(false)
+
+function progressColor(p: number): Cesium.Color {
+  const a = 0.5
+  const css = p < 0.34 ? '#ff3860' : p < 0.67 ? '#ff9d00' : '#00ff88'
+  return Cesium.Color.fromCssColorString(css).withAlpha(a)
+}
+function flyTo(key: 'overview' | 'upper' | 'lower' | 'powerhouse') {
+  if (!viewer) return
+  const m: Record<string, [number, number, number]> = {
+    upper: [SITE.upper.lon, SITE.upper.lat - 0.004, 1600],
+    lower: [SITE.lower.lon, SITE.lower.lat - 0.004, 1600],
+    powerhouse: [SITE.powerhouse.lon, SITE.powerhouse.lat - 0.004, 1300],
+    overview: [SITE.lower.lon + 0.018, SITE.lower.lat - 0.012, 3200]
+  }
+  const d = m[key]
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(d[0], d[1], d[2]),
+    orientation: { heading: Cesium.Math.toRadians(315), pitch: Cesium.Math.toRadians(key === 'overview' ? -34 : -42), roll: 0 },
+    duration: 1.6
+  })
+}
 
 function ring(lon: number, lat: number, rx: number, ry: number, n = 44): number[] {
   const out: number[] = []
@@ -140,11 +162,21 @@ onMounted(async () => {
 
 function zone(layer: string, key: string | null, lon: number, lat: number, rx: number, ry: number, fill: string, line: string) {
   const pts = ring(lon, lat, rx, ry)
+  const catColor = Cesium.Color.fromCssColorString(fill).withAlpha(0.45)
+  let material: any = catColor
+  if (key === 'upper' || key === 'lower') {
+    const fillId = key === 'upper' ? 'upperDam' : 'lowerDam'
+    material = new Cesium.ColorMaterialProperty(new Cesium.CallbackProperty(() => {
+      if (!heat.value) return catColor
+      const fz = c.fillProgress.find((z) => z.id === fillId)
+      return progressColor(fz ? fz.progress : 0)
+    }, false))
+  }
   ds[layer].entities.add({
     id: key ? `feat-${key}` : undefined,
     polygon: {
       hierarchy: Cesium.Cartesian3.fromDegreesArray(pts),
-      material: Cesium.Color.fromCssColorString(fill).withAlpha(0.45),
+      material,
       classificationType: Cesium.ClassificationType.TERRAIN
     }
   })
@@ -242,6 +274,19 @@ onBeforeUnmount(() => {
         <input type="checkbox" v-model="layers[k]" @change="applyLayer(k)" />
         <span>{{ ({ reservoir: '库区', dam: '大坝', yard: '场地', road: '道路', vehicle: '车辆' } as any)[k] }}</span>
       </label>
+      <div class="lc-sep" />
+      <label class="lc-item">
+        <input type="checkbox" v-model="heat" />
+        <span>进度热力</span>
+      </label>
+    </div>
+
+    <!-- 视角书签 -->
+    <div class="bm-bar">
+      <button @click="flyTo('overview')">全景</button>
+      <button @click="flyTo('upper')">上库</button>
+      <button @click="flyTo('lower')">下库</button>
+      <button @click="flyTo('powerhouse')">厂房</button>
     </div>
 
     <!-- 点选信息卡 -->
@@ -280,6 +325,16 @@ onBeforeUnmount(() => {
 .lc-title { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; letter-spacing: 1px; }
 .lc-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); cursor: pointer; padding: 2px 0; }
 .lc-item input { accent-color: var(--accent-cyan); }
+.lc-sep { height: 1px; background: var(--border-line); margin: 6px 0; }
+.bm-bar {
+  position: absolute; bottom: 14px; right: 14px; z-index: 6; display: flex; gap: 4px;
+  background: rgba(8,18,32,0.8); border: 1px solid var(--border-line); border-radius: 6px; padding: 4px; backdrop-filter: blur(8px);
+}
+.bm-bar button {
+  padding: 5px 12px; font-size: 12px; cursor: pointer; border: 1px solid var(--border-line);
+  border-radius: 4px; background: transparent; color: var(--text-secondary);
+}
+.bm-bar button:hover { color: var(--accent-cyan); border-color: var(--border-line-strong); }
 .info-card {
   position: absolute; top: 14px; right: 14px; z-index: 7; width: 280px;
   background: var(--bg-panel-strong); border: 1px solid var(--border-line-strong);
