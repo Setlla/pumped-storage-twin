@@ -1,13 +1,15 @@
 /**
  * Cesium 底图统一配置 — 优先天地图(国产/信创合规),其次 Cesium Ion 影像,最后 OpenStreetMap 兜底。
  *
- * 天地图需在 https://console.tianditu.gov.cn/ 注册免费 key,
- * 通过环境变量 VITE_TIANDITU_TOKEN 注入。
+ * 天地图需在 https://www.tianditu.gov.cn/ 注册免费 key(应用类型选"浏览器端")。
+ * 优先读环境变量 VITE_TIANDITU_TOKEN,否则用内置 key。
+ * ⚠️ 内置 key 已随公开仓库暴露,建议在天地图控制台限制该 key 的授权域名,或定期更换。
  */
 import * as Cesium from 'cesium'
 import { HAS_ION } from '@/config/cesium'
 
-export const TIANDITU_TOKEN = (import.meta.env.VITE_TIANDITU_TOKEN as string) || ''
+export const TIANDITU_TOKEN =
+  ((import.meta.env.VITE_TIANDITU_TOKEN as string) || '5d9d6f466b8f9bd57ed98e7e45ed5110')
 export const HAS_TDT = TIANDITU_TOKEN.length > 10
 
 // 天地图 WMTS 图层(球面墨卡托 w):img_w 影像 / cia_w 影像注记 / vec_w 矢量 / cva_w 矢量注记
