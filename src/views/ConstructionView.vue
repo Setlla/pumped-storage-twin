@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, shallowRef, markRaw } from 'vue'
+import ValueCockpit from '@/components/construction/ValueCockpit.vue'
 import ConstructionGlobe from '@/components/construction/ConstructionGlobe.vue'
 import SpaceTimeChart from '@/components/construction/SpaceTimeChart.vue'
 import TimePlanPanel from '@/components/construction/TimePlanPanel.vue'
@@ -11,8 +12,9 @@ import EarthworkBalancePanel from '@/components/construction/EarthworkBalancePan
 import ProgressPanel from '@/components/construction/ProgressPanel.vue'
 import FleetPanel from '@/components/construction/FleetPanel.vue'
 
-type Key = 'globe' | 'spacetime' | 'timeplan' | 'flow' | 'forecast' | 'dev'
+type Key = 'cockpit' | 'globe' | 'spacetime' | 'timeplan' | 'flow' | 'forecast' | 'dev'
 const tabs: { key: Key; label: string; icon: string }[] = [
+  { key: 'cockpit', label: '决策驾驶舱', icon: '🎯' },
   { key: 'globe', label: '实景地形', icon: '🛰️' },
   { key: 'spacetime', label: '时空平衡', icon: '📈' },
   { key: 'timeplan', label: '调配计划', icon: '🗓️' },
@@ -20,11 +22,12 @@ const tabs: { key: Key; label: string; icon: string }[] = [
   { key: 'forecast', label: '进度预判', icon: '🔮' },
   { key: 'dev', label: '设计vs实测', icon: '📐' }
 ]
-const active = ref<Key>('globe')
+const active = ref<Key>('cockpit')
 function switchTo(k: Key) {
   active.value = k
 }
 const comps = shallowRef({
+  cockpit: markRaw(ValueCockpit),
   globe: markRaw(ConstructionGlobe),
   spacetime: markRaw(SpaceTimeChart),
   timeplan: markRaw(TimePlanPanel),
