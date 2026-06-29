@@ -3,13 +3,15 @@ import { ref, shallowRef, markRaw } from 'vue'
 import CesiumScene from './CesiumScene.vue'
 import PowerhouseScene from './PowerhouseScene.vue'
 import SystemSchematic from './SystemSchematic.vue'
+import UE5StreamView from './UE5StreamView.vue'
 
-type ViewKey = 'panorama' | 'powerhouse' | 'schematic'
+type ViewKey = 'panorama' | 'powerhouse' | 'schematic' | 'ue5'
 
 const tabs: { key: ViewKey; label: string; icon: string }[] = [
   { key: 'panorama', label: '全景三维', icon: '🌐' },
   { key: 'powerhouse', label: '厂房剖切', icon: '⚙️' },
-  { key: 'schematic', label: '系统总览', icon: '📊' }
+  { key: 'schematic', label: '系统总览', icon: '📊' },
+  { key: 'ue5', label: 'UE5大屏', icon: '🎬' }
 ]
 
 const active = ref<ViewKey>('schematic')
@@ -21,7 +23,8 @@ function switchTo(key: ViewKey) {
 const comps = shallowRef({
   panorama: markRaw(CesiumScene),
   powerhouse: markRaw(PowerhouseScene),
-  schematic: markRaw(SystemSchematic)
+  schematic: markRaw(SystemSchematic),
+  ue5: markRaw(UE5StreamView)
 })
 </script>
 
