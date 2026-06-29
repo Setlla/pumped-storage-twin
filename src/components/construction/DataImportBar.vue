@@ -2,10 +2,12 @@
 import { ref } from 'vue'
 import { useConstructionStore } from '@/stores/construction'
 import { downloadTemplate, parseFile } from '@/logic/importData'
+import { useAuditStore } from '@/stores/audit'
 import { ElMessage } from 'element-plus'
 
 const c = useConstructionStore()
 const fileInput = ref<HTMLInputElement | null>(null)
+const audit = useAuditStore()
 
 function pick() { fileInput.value?.click() }
 
@@ -19,6 +21,7 @@ async function onFile(e: Event) {
       ElMessage.error('导入失败: ' + (res.errors[0] || '无有效数据'))
     } else {
       c.applyImport(res.cut, res.fill)
+      audit.log('导入台账', `开挖 ${res.cut.length} 项 / 填筑 ${res.fill.length} 项`)
       ElMessage.success(`导入成功: 开挖 ${res.cut.length} 项 / 填筑 ${res.fill.length} 项${res.errors.length ? ('，' + res.errors.length + ' 行跳过') : ''}`)
     }
   } catch (err: any) {

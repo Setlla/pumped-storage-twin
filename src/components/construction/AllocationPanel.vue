@@ -3,11 +3,13 @@ import { computed } from 'vue'
 import { useConstructionStore } from '@/stores/construction'
 import { useAllocationConfig } from '@/stores/allocationConfig'
 import { computeAllocation, STRATEGY_LABEL, type HaulMode, type Strategy } from '@/logic/allocation'
+import { useAuditStore } from '@/stores/audit'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import '@/styles/panel.css'
 
 const c = useConstructionStore()
 const cfg = useAllocationConfig()
+const audit = useAuditStore()
 
 function run(strategy: Strategy) {
   return computeAllocation(c.cutZones, c.fillZones, {
@@ -28,6 +30,7 @@ async function saveCurrent() {
       inputValue: `${STRATEGY_LABEL[cfg.strategy]}-${c.monthText}`, confirmButtonText: '保存', cancelButtonText: '取消'
     })
     cfg.saveScheme(value || STRATEGY_LABEL[cfg.strategy], result.value.kpi)
+    audit.log('保存调配方案', `${value || STRATEGY_LABEL[cfg.strategy]} · 直接上坝率 ${result.value.kpi.directRate}%`)
     ElMessage.success('方案已保存')
   } catch {}
 }

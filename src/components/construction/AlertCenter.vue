@@ -5,11 +5,13 @@ import { useAlertStore } from '@/stores/alerts'
 import { computeDeviation } from '@/logic/deviation'
 import { computeAllocation } from '@/logic/allocation'
 import { computeAlerts, type Thresholds } from '@/logic/alerts'
+import { useAuditStore } from '@/stores/audit'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import '@/styles/panel.css'
 
 const c = useConstructionStore()
 const a = useAlertStore()
+const audit = useAuditStore()
 
 const alerts = computed(() => {
   const deviation = computeDeviation(c.cutZones, c.fillZones, c.currentMonth)
@@ -37,6 +39,7 @@ async function handle(id: string) {
       confirmButtonText: '确认处置', cancelButtonText: '取消', inputPlaceholder: '如：已调整工序 / 已通知分包 / 已增设中转场…'
     })
     a.close(id, value || '已处置')
+    audit.log('处置预警', value || '已处置')
     ElMessage.success('预警已处置关闭')
   } catch { /* cancelled */ }
 }
