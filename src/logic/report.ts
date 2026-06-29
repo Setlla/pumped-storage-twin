@@ -7,7 +7,7 @@ import type { AllocationResult } from '@/logic/allocation'
 import type { Alert } from '@/logic/alerts'
 
 export interface ReportCtx {
-  type: '日报' | '周报' | '阶段报表'
+  type: '日报' | '周报' | '月报' | '阶段报表'
   monthText: string
   dataSource: string
   overallProgress: number
@@ -22,6 +22,7 @@ export interface ReportCtx {
   deviation: DeviationResult
   allocation: AllocationResult
   alerts: Alert[]
+  schemes?: { label: string; kpi: any }[]
 }
 
 function sheet(wb: XLSX.WorkBook, name: string, rows: (string | number)[][]) {
@@ -77,6 +78,25 @@ export function exportReport(ctx: ReportCtx) {
   ctx.alerts.forEach((al) => alertRows.push([al.level === 'critical' ? '严重' : '预警', al.category, al.value, al.message]))
   if (ctx.alerts.length === 0) alertRows.push(['—', '—', '—', '当前无活动预警'])
   sheet(wb, '预警清单', alertRows)
+
+  // 方案对比表(多目标优化)
+  if (ctx.schemes && ctx.schemes.length) {
+    const cmp: (string | number)[][] = [['优化目标', '直接上坝率%', '弃方率%', '平均运距km', '总车次', '运输成本万元', '中转量', '外购量']]
+    ctx.schemes.forEach((s) => cmp.push([s.label, s.kpi.directRate, s.kpi.spoilRate, s.kpi.avgHaulKm, s.kpi.totalTrips, s.kpi.totalCostWan, s.kpi.stockpileM3, s.kpi.borrowM3]))
+    sheet(wb, '方案对比', cmp)
+  }
+
+  // 料源利用率表
+  const utilRows: (string | number)[][] = [
+    ['指标', '数值', '单位'],
+    ['开挖料综合利用率', ctx.utilizationRate.toFixed(1), '%'],
+    ['直接上坝率', ctx.allocation.kpi.directRate, '%'],
+    ['弃方率', ctx.allocation.kpi.spoilRate, '%'],
+    ['平均运距', ctx.allocation.kpi.avgHaulKm, 'km'],
+    ['中转量', ctx.allocation.kpi.stockpileM3, '万m³'],
+    ['外购/加工料', ctx.allocation.kpi.borrowM3, '万m³']
+  ]
+  sheet(wb, '料源利用率', utilRows)
 
   const fname = `连云港抽蓄_土石方${ctx.type}_${ctx.monthText}.xlsx`
   XLSX.writeFile(wb, fname)

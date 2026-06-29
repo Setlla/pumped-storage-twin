@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import { useConstructionStore } from '@/stores/construction'
 import { useAlertStore } from '@/stores/alerts'
+import { useAllocationConfig } from '@/stores/allocationConfig'
 import { computeDeviation } from '@/logic/deviation'
-import { computeAllocation } from '@/logic/allocation'
+import { computeAllocation, STRATEGY_LABEL, type Strategy } from '@/logic/allocation'
 import { computeAlerts } from '@/logic/alerts'
 import { exportReport } from '@/logic/report'
 import { ElMessage } from 'element-plus'
 
 const c = useConstructionStore()
 const a = useAlertStore()
+const cfg = useAllocationConfig()
 
-function gen(type: '日报' | '周报' | '阶段报表') {
+function gen(type: '日报' | '周报' | '月报' | '阶段报表') {
+  const params = { truckCapacityM3: cfg.truckCapacityM3, costPerKmPerTrip: cfg.costPerKmPerTrip, stockpileLeadMonth: cfg.stockpileLeadMonth, strategy: cfg.strategy }
   const deviation = computeDeviation(c.cutZones, c.fillZones, c.currentMonth)
-  const allocation = computeAllocation(c.cutZones, c.fillZones)
+  const allocation = computeAllocation(c.cutZones, c.fillZones, params)
+  const strategies: Strategy[] = ['distance', 'cost', 'utilization']
+  const schemes = strategies.map((s) => ({ label: STRATEGY_LABEL[s], kpi: computeAllocation(c.cutZones, c.fillZones, { ...params, strategy: s }).kpi }))
   const alerts = computeAlerts(
     { deviation, allocation, slopeDisp: c.slopeDisp, stockPct: c.stockPct, spoilPct: c.spoilPct },
     a.thresholds
@@ -23,7 +28,7 @@ function gen(type: '日报' | '周报' | '阶段报表') {
     cutPlan: c.cutPlan, fillPlan: c.fillPlan, usablePlan: c.usablePlan,
     surplus: c.surplus, utilizationRate: c.utilizationRate,
     stockNow: c.stockNow, spoilUsed: c.spoilUsed,
-    deviation, allocation, alerts
+    deviation, allocation, alerts, schemes
   })
   ElMessage.success(`已导出${type}（Excel）`)
 }
@@ -35,6 +40,7 @@ function gen(type: '日报' | '周报' | '阶段报表') {
     <div class="btns">
       <button class="rb" @click="gen('日报')">日报</button>
       <button class="rb" @click="gen('周报')">周报</button>
+      <button class="rb" @click="gen('月报')">月报</button>
       <button class="rb primary" @click="gen('阶段报表')">阶段报表</button>
     </div>
   </div>
