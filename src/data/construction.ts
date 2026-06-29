@@ -53,11 +53,6 @@ export const SPOIL_YARD = { name: '1#弃渣场', capacityM3: 240 }
 export const STOCKPILE = { name: '中转料场(临时堆存)', capacityM3: 180 }
 export const BORROW_AREA = { name: '垫层料加工区', reserveM3: 80 }
 
-export const totalCutPlan = () => CUT_ZONES.reduce((s, z) => s + z.planM3, 0)
-export const totalFillPlan = () => FILL_ZONES.reduce((s, z) => s + z.planM3, 0)
-export const usableCutPlan = () =>
-  CUT_ZONES.reduce((s, z) => s + z.planM3 * z.usableRate, 0)
-
 /** 平滑 S 曲线(smoothstep) */
 function smooth(x: number): number {
   const t = Math.max(0, Math.min(1, x))
@@ -111,24 +106,6 @@ export function buildMonthlySeries(
   }
   return pts
 }
-
-
-/**
- * 调配关系(挖→填/弃, 借→填). 单位万m³, 用于调配流向图.
- */
-export const HAUL_PLAN: { from: string; to: string; m3: number }[] = [
-  { from: 'upper', to: 'upperDam', m3: 198 },
-  { from: 'upper', to: 'spoil', m3: 52 },
-  { from: 'cavern', to: 'upperDam', m3: 78 },
-  { from: 'tunnel', to: 'upperDam', m3: 42 },
-  { from: 'tunnel', to: 'lowerDam', m3: 66 },
-  { from: 'lower', to: 'lowerDam', m3: 42 },
-  { from: 'lower', to: 'subgrade', m3: 48 },
-  { from: 'lower', to: 'spoil', m3: 46 },
-  { from: 'road', to: 'subgrade', m3: 24 },
-  { from: 'road', to: 'spoil', m3: 30 },
-  { from: 'borrow', to: 'liner', m3: 42 }
-]
 
 
 /** 料质类型 */

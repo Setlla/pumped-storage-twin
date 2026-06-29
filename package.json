@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@kjgl77/datav-vue3": "^1.7.4",
-    "@mkkellogg/gaussian-splats-3d": "^0.4.7",
     "cesium": "^1.118.2",
     "countup.js": "^2.10.0",
     "echarts": "^5.5.0",
