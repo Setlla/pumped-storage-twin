@@ -6,6 +6,7 @@ import EarthworkFlow from '@/components/construction/EarthworkFlow.vue'
 import AllocationPanel from '@/components/construction/AllocationPanel.vue'
 import DeviationPanel from '@/components/construction/DeviationPanel.vue'
 import AlertCenter from '@/components/construction/AlertCenter.vue'
+import ForecastPanel from '@/components/construction/ForecastPanel.vue'
 import MasterDataPanel from '@/components/construction/MasterDataPanel.vue'
 import TimelineBar from '@/components/construction/TimelineBar.vue'
 import EarthworkBalancePanel from '@/components/construction/EarthworkBalancePanel.vue'
@@ -15,12 +16,13 @@ import DataImportBar from '@/components/construction/DataImportBar.vue'
 import ReportBar from '@/components/construction/ReportBar.vue'
 import BackendBar from '@/components/construction/BackendBar.vue'
 
-type Key = 'globe' | 'spacetime' | 'flow' | 'alloc' | 'dev' | 'alert' | 'master'
+type Key = 'globe' | 'spacetime' | 'flow' | 'alloc' | 'forecast' | 'dev' | 'alert' | 'master'
 const tabs: { key: Key; label: string; icon: string }[] = [
   { key: 'globe', label: '实景地形', icon: '🛰️' },
   { key: 'spacetime', label: '时空平衡', icon: '📈' },
   { key: 'flow', label: '调配流向', icon: '🔀' },
   { key: 'alloc', label: '智能调配', icon: '🧮' },
+  { key: 'forecast', label: '进度预判', icon: '🔮' },
   { key: 'dev', label: '设计vs实测', icon: '📐' },
   { key: 'alert', label: '预警中心', icon: '🚨' },
   { key: 'master', label: '基础资料', icon: '🗂️' }
@@ -34,6 +36,7 @@ const comps = shallowRef({
   spacetime: markRaw(SpaceTimeChart),
   flow: markRaw(EarthworkFlow),
   alloc: markRaw(AllocationPanel),
+  forecast: markRaw(ForecastPanel),
   dev: markRaw(DeviationPanel),
   alert: markRaw(AlertCenter),
   master: markRaw(MasterDataPanel)
