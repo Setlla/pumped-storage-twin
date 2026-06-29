@@ -2,18 +2,25 @@
 import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
 import * as echarts from 'echarts/core'
 import { LineChart, BarChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent, LegendComponent, MarkLineComponent } from 'echarts/components'
+import { GridComponent, TooltipComponent, LegendComponent, MarkLineComponent, MarkAreaComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { useConstructionStore } from '@/stores/construction'
-import { monthLabel } from '@/data/construction'
+import { monthLabel, STOCKPILE } from '@/data/construction'
 
-echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, MarkLineComponent, CanvasRenderer])
+echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, MarkLineComponent, MarkAreaComponent, CanvasRenderer])
 
 const c = useConstructionStore()
 const wrap = ref<HTMLDivElement | null>(null)
 let chart: echarts.ECharts | null = null
 
 const months = computed(() => c.series.map((p) => monthLabel(p.month)))
+
+// 超容窗口(中转堆存 > 容量 的首尾索引)
+function overCapWindow(s: { stock: number }[]): [number, number] | null {
+  const idx = s.map((p, i) => (p.stock > STOCKPILE.capacityM3 ? i : -1)).filter((i) => i >= 0)
+  if (idx.length === 0) return null
+  return [idx[0], idx[idx.length - 1]]
+}
 
 function buildOption() {
   const s = c.series
@@ -77,9 +84,15 @@ function buildOption() {
         areaStyle: { color: 'rgba(167,139,250,0.18)' },
         markLine: {
           symbol: 'none', silent: true,
-          lineStyle: { color: '#00ff88', width: 2 },
-          data: [{ xAxis: Math.max(0, Math.round(c.currentMonth) - 1), label: { show: false } }]
-        }
+          data: [
+            { xAxis: Math.max(0, Math.round(c.currentMonth) - 1), lineStyle: { color: '#00ff88', width: 2 }, label: { formatter: '当前', color: '#00ff88', fontSize: 10 } },
+            { yAxis: STOCKPILE.capacityM3, lineStyle: { color: '#ff3860', width: 1.5, type: 'dashed' }, label: { formatter: '中转场容量', color: '#ff3860', fontSize: 10, position: 'insideEndTop' } }
+          ]
+        },
+        markArea: overCapWindow(s) ? {
+          silent: true, itemStyle: { color: 'rgba(255,56,96,0.12)' },
+          data: [[{ xAxis: overCapWindow(s)![0], label: { show: true, formatter: '超容', color: '#ff3860', fontSize: 10, position: 'top' } }, { xAxis: overCapWindow(s)![1] }]]
+        } : undefined
       }
     ]
   }
