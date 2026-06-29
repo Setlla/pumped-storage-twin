@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, reactive, computed } from 'vue'
+import { onMounted, onBeforeUnmount, ref, reactive, computed, watch } from 'vue'
 import * as Cesium from 'cesium'
 import { useConstructionStore } from '@/stores/construction'
 import { useAlertStore } from '@/stores/alerts'
@@ -34,6 +34,21 @@ const ds: Record<string, Cesium.CustomDataSource> = {}
 const selectedKey = ref<string | null>(null)
 const baseName = basemapName()
 const heat = ref(false)
+const heatEntities: Record<string, { ent: Cesium.Entity; cat: Cesium.Color }> = {}
+
+function updateHeat() {
+  for (const key of ['upper', 'lower']) {
+    const h = heatEntities[key]
+    if (!h || !h.ent.polygon) continue
+    if (heat.value) {
+      const fz = c.fillProgress.find((z) => z.id === (key === 'upper' ? 'upperDam' : 'lowerDam'))
+      ;(h.ent.polygon.material as any) = progressColor(fz ? fz.progress : 0)
+    } else {
+      ;(h.ent.polygon.material as any) = h.cat
+    }
+  }
+}
+watch([heat, () => Math.round(c.currentMonth)], updateHeat)
 
 function progressColor(p: number): Cesium.Color {
   const a = 0.5
@@ -141,7 +156,7 @@ onMounted(async () => {
   ;['reservoir', 'dam', 'yard', 'road', 'vehicle'].forEach((k) => {
     ds[k] = new Cesium.CustomDataSource(k); viewer!.dataSources.add(ds[k])
   })
-  buildOverlay()
+  try { buildOverlay() } catch (err) { console.error('[globe] buildOverlay 失败', err) }
 
   // 点选查询
   handler = new Cesium.ScreenSpaceEventHandler(scene.canvas)
@@ -163,23 +178,15 @@ onMounted(async () => {
 function zone(layer: string, key: string | null, lon: number, lat: number, rx: number, ry: number, fill: string, line: string) {
   const pts = ring(lon, lat, rx, ry)
   const catColor = Cesium.Color.fromCssColorString(fill).withAlpha(0.45)
-  let material: any = catColor
-  if (key === 'upper' || key === 'lower') {
-    const fillId = key === 'upper' ? 'upperDam' : 'lowerDam'
-    material = new Cesium.ColorMaterialProperty(new Cesium.CallbackProperty(() => {
-      if (!heat.value) return catColor
-      const fz = c.fillProgress.find((z) => z.id === fillId)
-      return progressColor(fz ? fz.progress : 0)
-    }, false))
-  }
-  ds[layer].entities.add({
+  const ent = ds[layer].entities.add({
     id: key ? `feat-${key}` : undefined,
     polygon: {
       hierarchy: Cesium.Cartesian3.fromDegreesArray(pts),
-      material,
+      material: catColor, // 贴地多边形仅支持常量颜色; 热力切换时直接改常量
       classificationType: Cesium.ClassificationType.TERRAIN
     }
   })
+  if (key === 'upper' || key === 'lower') heatEntities[key] = { ent, cat: catColor }
   ds[layer].entities.add({
     polyline: {
       positions: Cesium.Cartesian3.fromDegreesArray(pts), width: 3, clampToGround: true,
