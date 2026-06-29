@@ -4,6 +4,7 @@ import * as Cesium from 'cesium'
 import { usePlantStore } from '@/stores/plant'
 import { SITE_COORDS, PLANT_INFO, UPPER_RES, LOWER_RES } from '@/data/plantConfig'
 import { CESIUM_ION_TOKEN, HAS_ION } from '@/config/cesium'
+import { applyBasemap } from '@/utils/cesiumBase'
 
 const container = ref<HTMLDivElement | null>(null)
 const plant = usePlantStore()
@@ -85,6 +86,7 @@ onMounted(async () => {
 
   viewer = new Cesium.Viewer(container.value, viewerOptions)
   const scene = viewer.scene
+  applyBasemap(viewer)
   const sky = scene.skyAtmosphere
   if (sky) {
     sky.hueShift = -0.02

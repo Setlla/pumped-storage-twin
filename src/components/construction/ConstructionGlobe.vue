@@ -7,6 +7,7 @@ import { computeDeviation } from '@/logic/deviation'
 import { computeAllocation } from '@/logic/allocation'
 import { computeAlerts } from '@/logic/alerts'
 import { CESIUM_ION_TOKEN, HAS_ION } from '@/config/cesium'
+import { applyBasemap, basemapName } from '@/utils/cesiumBase'
 
 const container = ref<HTMLDivElement | null>(null)
 const c = useConstructionStore()
@@ -31,6 +32,7 @@ const ds: Record<string, Cesium.CustomDataSource> = {}
 
 // 点选要素
 const selectedKey = ref<string | null>(null)
+const baseName = basemapName()
 
 function ring(lon: number, lat: number, rx: number, ry: number, n = 44): number[] {
   const out: number[] = []
@@ -112,12 +114,7 @@ onMounted(async () => {
   scene.globe.enableLighting = true
   try { (scene as any).verticalExaggeration = 1.6 } catch {}
   if (scene.skyAtmosphere) scene.skyAtmosphere.brightnessShift = -0.05
-  if (HAS_ION) {
-    try {
-      scene.imageryLayers.removeAll()
-      scene.imageryLayers.add(Cesium.ImageryLayer.fromProviderAsync(Cesium.IonImageryProvider.fromAssetId(2), undefined))
-    } catch {}
-  }
+  applyBasemap(viewer)
 
   ;['reservoir', 'dam', 'yard', 'road', 'vehicle'].forEach((k) => {
     ds[k] = new Cesium.CustomDataSource(k); viewer!.dataSources.add(ds[k])
@@ -267,7 +264,7 @@ onBeforeUnmount(() => {
     </transition>
 
     <div class="globe-note">
-      🛰️ 真实地形+卫星影像 · 宿城/云台山 ｜ <b>点击库区/弃渣场/料场</b>查看设计·实测·进度·预警 ｜ 坐标估算待红线对位
+      🛰️ 底图：{{ baseName }} · 宿城/云台山 ｜ <b>点击库区/弃渣场/料场</b>查看设计·实测·进度·预警 ｜ 坐标估算待红线对位
     </div>
   </div>
 </template>
