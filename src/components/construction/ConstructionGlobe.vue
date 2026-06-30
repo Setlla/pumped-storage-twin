@@ -16,16 +16,16 @@ let viewer: Cesium.Viewer | null = null
 let handler: Cesium.ScreenSpaceEventHandler | null = null
 let phase = 0
 
-// 坐标为估算(云台山主峰玉女峰高地形区,下库置于北侧既有水库洼地);待真实红线/可研坐标接入后替换
+// 坐标为估算:整体置于原址西南侧(约45°左下),上库在东北高处(山上)、下库落在西南既有水库;待真实红线坐标接入后替换
 const SITE = {
-  upper: { lon: 119.4060, lat: 34.7375 },
-  lower: { lon: 119.3968, lat: 34.7448 },
-  powerhouse: { lon: 119.4014, lat: 34.7410 },
-  spoil: { lon: 119.4108, lat: 34.7392 },
-  borrow: { lon: 119.3945, lat: 34.7398 }
+  upper: { lon: 119.4090, lat: 34.7140 },
+  lower: { lon: 119.4010, lat: 34.7070 },
+  powerhouse: { lon: 119.4050, lat: 34.7105 },
+  spoil: { lon: 119.4130, lat: 34.7125 },
+  borrow: { lon: 119.3980, lat: 34.7085 }
 }
-const ROAD_LL = [119.4060, 34.7375, 119.4040, 34.7392, 119.4014, 34.7410, 119.3992, 34.7428, 119.3968, 34.7448]
-const ROAD2_LL = [119.4060, 34.7375, 119.4085, 34.7384, 119.4108, 34.7392]
+const ROAD_LL = [119.4090, 34.7140, 119.4070, 34.7122, 119.4050, 34.7105, 119.4030, 34.7088, 119.4010, 34.7070]
+const ROAD2_LL = [119.4090, 34.7140, 119.4110, 34.7132, 119.4130, 34.7125]
 
 // 图层显隐
 const layers = reactive({ reservoir: true, dam: true, yard: true, road: true, vehicle: true })
