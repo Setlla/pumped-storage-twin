@@ -16,30 +16,16 @@ let viewer: Cesium.Viewer | null = null
 let handler: Cesium.ScreenSpaceEventHandler | null = null
 let phase = 0
 
-const SITE_KEY = 'twin-site-delta'
-const DEFAULTS: Record<'upper' | 'lower' | 'powerhouse' | 'spoil' | 'borrow', { lon: number; lat: number }> = {
-  upper: { lon: 119.4175, lat: 34.7285 },
-  lower: { lon: 119.4255, lat: 34.7175 },
-  powerhouse: { lon: 119.4210, lat: 34.7230 },
-  spoil: { lon: 119.4105, lat: 34.7240 },
-  borrow: { lon: 119.4310, lat: 34.7255 }
+// 坐标为估算(云台山一带,下库贴合既有水库洼地);待真实红线/可研坐标接入后替换
+const SITE = {
+  upper: { lon: 119.4095, lat: 34.7330 },
+  lower: { lon: 119.4015, lat: 34.7395 },
+  powerhouse: { lon: 119.4058, lat: 34.7362 },
+  spoil: { lon: 119.4140, lat: 34.7305 },
+  borrow: { lon: 119.4150, lat: 34.7360 }
 }
-const SITE: typeof DEFAULTS = JSON.parse(JSON.stringify(DEFAULTS))
-const DEFAULT_ROAD_LL = [119.4175, 34.7285, 119.4150, 34.7258, 119.4140, 34.7232, 119.4175, 34.7205, 119.4220, 34.7186, 119.4255, 34.7175]
-const DEFAULT_ROAD2_LL = [119.4175, 34.7285, 119.4140, 34.7268, 119.4108, 34.7242]
-const ROAD_LL = [...DEFAULT_ROAD_LL]
-const ROAD2_LL = [...DEFAULT_ROAD2_LL]
-
-// 位置标定:整套布置可平移并记忆(因暂无真实红线坐标,允许用户对齐到真实地物)
-const calib = ref(false)
-function loadDelta(): { dLon: number; dLat: number } | null {
-  try { const s = localStorage.getItem(SITE_KEY); return s ? JSON.parse(s) : null } catch { return null }
-}
-function applyDelta(dLon: number, dLat: number) {
-  ;(Object.keys(SITE) as (keyof typeof SITE)[]).forEach((k) => { SITE[k].lon += dLon; SITE[k].lat += dLat })
-  for (let i = 0; i < ROAD_LL.length; i += 2) { ROAD_LL[i] += dLon; ROAD_LL[i + 1] += dLat }
-  for (let i = 0; i < ROAD2_LL.length; i += 2) { ROAD2_LL[i] += dLon; ROAD2_LL[i + 1] += dLat }
-}
+const ROAD_LL = [119.4095, 34.7330, 119.4078, 34.7350, 119.4058, 34.7362, 119.4038, 34.7378, 119.4015, 34.7395]
+const ROAD2_LL = [119.4095, 34.7330, 119.4118, 34.7318, 119.4140, 34.7305]
 
 // 图层显隐
 const layers = reactive({ reservoir: true, dam: true, yard: true, road: true, vehicle: true })
@@ -152,42 +138,6 @@ function applyLayer(name: keyof typeof layers) {
   if (ds[name]) ds[name].show = layers[name]
 }
 
-// 重建覆盖物(标定平移后调用)
-function rebuildOverlay() {
-  if (!viewer) return
-  Object.keys(ds).forEach((k) => ds[k].entities.removeAll())
-  Object.keys(heatEntities).forEach((k) => delete heatEntities[k])
-  try { buildOverlay() } catch (err) { console.error('[globe] rebuild 失败', err) }
-  ;(Object.keys(layers) as (keyof typeof layers)[]).forEach((k) => { if (ds[k]) ds[k].show = layers[k] })
-  updateHeat()
-}
-
-function saveDelta(dLon: number, dLat: number) {
-  const cur = loadDelta() || { dLon: 0, dLat: 0 }
-  localStorage.setItem(SITE_KEY, JSON.stringify({ dLon: cur.dLon + dLon, dLat: cur.dLat + dLat }))
-}
-
-// 把整套布置平移,使"厂房"基准点落到点击的经纬度
-function calibrateTo(lon: number, lat: number) {
-  const dLon = lon - SITE.powerhouse.lon
-  const dLat = lat - SITE.powerhouse.lat
-  applyDelta(dLon, dLat)
-  saveDelta(dLon, dLat)
-  rebuildOverlay()
-  flyTo('overview')
-}
-
-function resetSite() {
-  localStorage.removeItem(SITE_KEY)
-  ;(Object.keys(DEFAULTS) as (keyof typeof DEFAULTS)[]).forEach((k) => {
-    SITE[k].lon = DEFAULTS[k].lon; SITE[k].lat = DEFAULTS[k].lat
-  })
-  ROAD_LL.splice(0, ROAD_LL.length, ...DEFAULT_ROAD_LL)
-  ROAD2_LL.splice(0, ROAD2_LL.length, ...DEFAULT_ROAD2_LL)
-  rebuildOverlay()
-  flyTo('overview')
-}
-
 
 onMounted(async () => {
   if (!container.value) return
@@ -207,24 +157,11 @@ onMounted(async () => {
   ;['reservoir', 'dam', 'yard', 'road', 'vehicle'].forEach((k) => {
     ds[k] = new Cesium.CustomDataSource(k); viewer!.dataSources.add(ds[k])
   })
-  // 应用已保存的标定平移
-  const saved = loadDelta()
-  if (saved) applyDelta(saved.dLon, saved.dLat)
   try { buildOverlay() } catch (err) { console.error('[globe] buildOverlay 失败', err) }
 
-  // 点选查询 / 标定
+  // 点选查询
   handler = new Cesium.ScreenSpaceEventHandler(scene.canvas)
   handler.setInputAction((e: any) => {
-    if (calib.value) {
-      const ray = viewer!.camera.getPickRay(e.position)
-      const cart = ray ? viewer!.scene.globe.pick(ray, viewer!.scene) : undefined
-      if (cart) {
-        const cg = Cesium.Cartographic.fromCartesian(cart)
-        calibrateTo(Cesium.Math.toDegrees(cg.longitude), Cesium.Math.toDegrees(cg.latitude))
-      }
-      calib.value = false
-      return
-    }
     const picked = scene.pick(e.position)
     const id = picked?.id?.id
     if (typeof id === 'string' && id.startsWith('feat-')) selectedKey.value = id.slice(5)
@@ -335,7 +272,7 @@ onBeforeUnmount(() => {
 
 
 <template>
-  <div class="globe-wrap" :class="{ calibrating: calib }">
+  <div class="globe-wrap">
     <div ref="container" class="globe-canvas" />
 
     <!-- 图层控制 -->
@@ -358,17 +295,7 @@ onBeforeUnmount(() => {
       <button @click="flyTo('upper')">上库</button>
       <button @click="flyTo('lower')">下库</button>
       <button @click="flyTo('powerhouse')">厂房</button>
-      <span class="bm-sep" />
-      <button :class="{ active: calib }" @click="calib = !calib">{{ calib ? '点地图定位…' : '标定位置' }}</button>
-      <button @click="resetSite">复位</button>
     </div>
-
-    <!-- 标定提示 -->
-    <transition name="fade">
-      <div v-if="calib" class="calib-hint">
-        🎯 标定模式:在地图上<b>点击真实厂区/下水库位置</b>,整套布置将平移过去并记住(对齐你看到的真实水库即可)。再次点按钮可取消。
-      </div>
-    </transition>
 
     <!-- 点选信息卡 -->
     <transition name="fade">
@@ -390,7 +317,7 @@ onBeforeUnmount(() => {
     </transition>
 
     <div class="globe-note">
-      🛰️ 底图：{{ baseName }} · 云台山一带 ｜ <b>点击库区/弃渣场/料场</b>查看设计·实测·进度·预警 ｜ 坐标为估算,可用<b>「标定位置」</b>对齐真实红线/既有水库
+      🛰️ 底图：{{ baseName }} · 云台山一带 ｜ <b>点击库区/弃渣场/料场</b>查看设计·实测·进度·预警 ｜ 坐标为估算,待真实红线数据接入后替换
     </div>
   </div>
 </template>
@@ -398,7 +325,6 @@ onBeforeUnmount(() => {
 <style scoped>
 .globe-wrap { position: relative; width: 100%; height: 100%; }
 .globe-canvas { width: 100%; height: 100%; }
-.globe-wrap.calibrating .globe-canvas { cursor: crosshair; }
 .layer-ctrl {
   position: absolute; top: 14px; left: 14px; z-index: 6;
   background: rgba(8,18,32,0.8); border: 1px solid var(--border-line);
@@ -417,15 +343,6 @@ onBeforeUnmount(() => {
   border-radius: 4px; background: transparent; color: var(--text-secondary);
 }
 .bm-bar button:hover { color: var(--accent-cyan); border-color: var(--border-line-strong); }
-.bm-bar button.active { color: #061222; font-weight: 600; background: linear-gradient(135deg, var(--accent-orange), #ffb340); border-color: var(--accent-orange); }
-.bm-sep { width: 1px; align-self: stretch; background: var(--border-line); margin: 0 2px; }
-.calib-hint {
-  position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 8;
-  max-width: 560px; font-size: 12px; line-height: 1.6; color: #ffe6c2;
-  background: rgba(40, 24, 4, 0.92); border: 1px solid var(--accent-orange);
-  border-radius: 6px; padding: 9px 14px; box-shadow: 0 0 16px rgba(255, 157, 0, 0.3);
-}
-.calib-hint b { color: var(--accent-orange); }
 .info-card {
   position: absolute; top: 14px; right: 14px; z-index: 7; width: 280px;
   background: var(--bg-panel-strong); border: 1px solid var(--border-line-strong);
