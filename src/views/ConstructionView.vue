@@ -7,14 +7,16 @@ import TimePlanPanel from '@/components/construction/TimePlanPanel.vue'
 import EarthworkFlow from '@/components/construction/EarthworkFlow.vue'
 import DeviationPanel from '@/components/construction/DeviationPanel.vue'
 import ForecastPanel from '@/components/construction/ForecastPanel.vue'
+import AiAssistant from '@/components/construction/AiAssistant.vue'
 import TimelineBar from '@/components/construction/TimelineBar.vue'
 import EarthworkBalancePanel from '@/components/construction/EarthworkBalancePanel.vue'
 import ProgressPanel from '@/components/construction/ProgressPanel.vue'
 import FleetPanel from '@/components/construction/FleetPanel.vue'
 
-type Key = 'cockpit' | 'globe' | 'spacetime' | 'timeplan' | 'flow' | 'forecast' | 'dev'
+type Key = 'cockpit' | 'ai' | 'globe' | 'spacetime' | 'timeplan' | 'flow' | 'forecast' | 'dev'
 const tabs: { key: Key; label: string; icon: string }[] = [
   { key: 'cockpit', label: '决策驾驶舱', icon: '🎯' },
+  { key: 'ai', label: '智能助手', icon: '🤖' },
   { key: 'globe', label: '实景地形', icon: '🛰️' },
   { key: 'spacetime', label: '时空平衡', icon: '📈' },
   { key: 'timeplan', label: '调配计划', icon: '🗓️' },
@@ -28,6 +30,7 @@ function switchTo(k: Key) {
 }
 const comps = shallowRef({
   cockpit: markRaw(ValueCockpit),
+  ai: markRaw(AiAssistant),
   globe: markRaw(ConstructionGlobe),
   spacetime: markRaw(SpaceTimeChart),
   timeplan: markRaw(TimePlanPanel),
