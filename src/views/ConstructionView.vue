@@ -71,22 +71,27 @@ const comps = shallowRef({
 .phase-body { flex: 1; display: flex; min-height: 0; padding: 10px; gap: 10px; }
 .left-col { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .scene-area {
-  flex: 1; position: relative;
+  flex: 1; display: flex; flex-direction: column; min-height: 0;
   border: 1px solid var(--border-line); border-radius: 6px;
   overflow: hidden; box-shadow: var(--shadow-glow);
 }
 .side-rail { width: 360px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
 .tab-bar {
-  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-  z-index: 10; display: flex; gap: 2px;
-  background: rgba(8, 18, 32, 0.78); border: 1px solid var(--border-line);
-  border-radius: 6px; padding: 3px; backdrop-filter: blur(8px);
+  flex-shrink: 0; z-index: 10; display: flex; gap: 2px;
+  background: rgba(8, 18, 32, 0.95);
+  border-bottom: 1px solid var(--border-line);
+  padding: 4px 6px;
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: thin; scrollbar-color: var(--accent-cyan) transparent;
 }
+.tab-bar::-webkit-scrollbar { height: 4px; }
+.tab-bar::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.4); border-radius: 2px; }
 .tab {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 16px; border: none; background: transparent;
+  flex: 0 0 auto; white-space: nowrap;
+  display: flex; align-items: center; gap: 5px;
+  padding: 7px 14px; border: none; background: transparent;
   color: var(--text-secondary); font-size: 13px; cursor: pointer;
-  border-radius: 4px; transition: all 0.2s; letter-spacing: 1px;
+  border-radius: 4px; transition: all 0.2s; letter-spacing: 0.5px;
 }
 .tab:hover { color: var(--text-primary); background: rgba(0, 212, 255, 0.08); }
 .tab.active {
@@ -94,7 +99,7 @@ const comps = shallowRef({
   background: linear-gradient(135deg, var(--accent-cyan), #0099ff);
   box-shadow: 0 0 12px rgba(0, 212, 255, 0.5);
 }
-.view-stack { flex: 1; position: relative; height: 100%; }
+.view-stack { flex: 1; position: relative; min-height: 0; }
 .view-pane { position: absolute; inset: 0; }
 .timeline-wrap { flex-shrink: 0; }
 </style>
