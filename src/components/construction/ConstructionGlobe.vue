@@ -16,16 +16,16 @@ let viewer: Cesium.Viewer | null = null
 let handler: Cesium.ScreenSpaceEventHandler | null = null
 let phase = 0
 
-// 坐标为估算:整体置于原址西南侧(约45°左下),上库在东北高处(山上)、下库落在西南既有水库;待真实红线坐标接入后替换
+// 下库=宿城水库(真实坐标,来源 OpenStreetMap:119.4192,34.7007);上库置于其北侧云台山山脊高处;待真实红线替换上/厂坐标
 const SITE = {
-  upper: { lon: 119.4090, lat: 34.7140 },
-  lower: { lon: 119.4010, lat: 34.7070 },
-  powerhouse: { lon: 119.4050, lat: 34.7105 },
-  spoil: { lon: 119.4130, lat: 34.7125 },
-  borrow: { lon: 119.3980, lat: 34.7085 }
+  upper: { lon: 119.4150, lat: 34.7120 },
+  lower: { lon: 119.4192, lat: 34.7007 },
+  powerhouse: { lon: 119.4172, lat: 34.7062 },
+  spoil: { lon: 119.4088, lat: 34.7110 },
+  borrow: { lon: 119.4232, lat: 34.7098 }
 }
-const ROAD_LL = [119.4090, 34.7140, 119.4070, 34.7122, 119.4050, 34.7105, 119.4030, 34.7088, 119.4010, 34.7070]
-const ROAD2_LL = [119.4090, 34.7140, 119.4110, 34.7132, 119.4130, 34.7125]
+const ROAD_LL = [119.4150, 34.7120, 119.4162, 34.7091, 119.4172, 34.7062, 119.4182, 34.7034, 119.4192, 34.7007]
+const ROAD2_LL = [119.4150, 34.7120, 119.4119, 34.7115, 119.4088, 34.7110]
 
 // 图层显隐
 const layers = reactive({ reservoir: true, dam: true, yard: true, road: true, vehicle: true })
@@ -111,7 +111,7 @@ const featureInfo = computed(() => {
   if (key === 'lower') {
     const cut = find('lower'); const fill = find('lowerDam')
     return {
-      title: '下水库 · 库盆开挖 + 围堰/坝', rows: [
+      title: '下水库 · 宿城水库(利用既有水库)', rows: [
         ['开挖设计 / 实测', `${cut?.designM3 ?? '-'} / ${cut?.actualM3 ?? '-'} 万m³`],
         ['开挖进度', `${cut ? (cut.actualProgress * 100).toFixed(0) : '-'}%`],
         ['填筑设计 / 实测', `${fill?.designM3 ?? '-'} / ${fill?.actualM3 ?? '-'} 万m³`],
@@ -215,9 +215,9 @@ function label(layer: string, key: string | null, text: string, lon: number, lat
 function buildOverlay() {
   // 库区
   zone('reservoir', 'upper', SITE.upper.lon, SITE.upper.lat, 230, 180, '#16b6ff', '#aee7ff')
-  zone('reservoir', 'lower', SITE.lower.lon, SITE.lower.lat, 300, 220, '#1184e0', '#9fd0ff')
+  zone('reservoir', 'lower', SITE.lower.lon, SITE.lower.lat, 430, 270, '#1184e0', '#9fd0ff')
   label('reservoir', 'upper', '上水库 · 库盆开挖+面板堆石坝', SITE.upper.lon, SITE.upper.lat, '#00ff88')
-  label('reservoir', 'lower', '下水库', SITE.lower.lon, SITE.lower.lat, '#19a0ff')
+  label('reservoir', 'lower', '下水库 · 宿城水库', SITE.lower.lon, SITE.lower.lat, '#19a0ff')
   label('reservoir', 'powerhouse', '地下厂房 1200MW', SITE.powerhouse.lon, SITE.powerhouse.lat, '#ff9d00')
 
   // 大坝轴线
@@ -317,7 +317,7 @@ onBeforeUnmount(() => {
     </transition>
 
     <div class="globe-note">
-      🛰️ 底图：{{ baseName }} · 云台山一带 ｜ <b>点击库区/弃渣场/料场</b>查看设计·实测·进度·预警 ｜ 坐标为估算,待真实红线数据接入后替换
+      🛰️ 底图：{{ baseName }} · 连云区宿城 ｜ 下库=<b>宿城水库</b>(真实坐标/OSM) ｜ <b>点击库区/弃渣场/料场</b>查看设计·实测·进度·预警 ｜ 上库/厂房为估算,待红线替换
     </div>
   </div>
 </template>
