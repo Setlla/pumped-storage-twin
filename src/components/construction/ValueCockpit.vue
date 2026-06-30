@@ -109,7 +109,7 @@ function openDecision(d: { type: string; title: string }) {
     <div class="vc-note">说明:经济效益为测算(外购 {{ BUY }} 元/m³、弃渣 {{ SPOIL }} 元/m³,单价可调);接入真实台账后即为本项目实际测算。净效益 = 就地利用替代外购 − 弃渣 − 外购 − 运输。</div>
 
     <!-- 决策论证抽屉 -->
-    <ElDrawer v-model="drawer" :title="selTitle" size="48%" direction="rtl">
+    <ElDrawer v-model="drawer" :title="selTitle" size="48%" direction="rtl" class="arg-drawer">
       <div v-if="detail" class="arg">
         <div class="arg-tag">决策论证 · 为什么这么建议</div>
 
@@ -218,4 +218,19 @@ function openDecision(d: { type: string; title: string }) {
 .arg-sources { display: flex; flex-wrap: wrap; gap: 8px; }
 .src { font-size: 12px; background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); color: var(--accent-cyan); border-radius: 4px; padding: 3px 8px; }
 .vc-note { flex-shrink: 0; font-size: 11px; color: var(--text-dim); line-height: 1.6; border-top: 1px solid var(--border-line); padding-top: 8px; }
+</style>
+
+<!-- 全局样式:抽屉为 teleport 内容,scoped 够不到,需用非 scoped 覆盖为深色主题 -->
+<style>
+.arg-drawer.el-drawer { background-color: #0a1a30; }
+.arg-drawer .el-drawer__header {
+  margin-bottom: 0; padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e8f2ff;
+}
+.arg-drawer .el-drawer__title { color: #e8f2ff; font-size: 15px; font-weight: 700; }
+.arg-drawer .el-drawer__close-btn,
+.arg-drawer .el-drawer__close-btn .el-icon { color: #9fb3c8; }
+.arg-drawer .el-drawer__close-btn:hover .el-icon { color: var(--accent-cyan); }
+.arg-drawer .el-drawer__body { background-color: #0a1a30; color: #cfe0f5; padding: 18px 20px; }
 </style>
