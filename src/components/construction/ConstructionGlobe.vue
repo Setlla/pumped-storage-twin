@@ -159,13 +159,17 @@ onMounted(async () => {
   })
   try { buildOverlay() } catch (err) { console.error('[globe] buildOverlay 失败', err) }
 
-  // 点选查询
+  // 点选查询(drillPick:取鼠标下所有要素,优先命中点位/库区,提升点击准确度)
   handler = new Cesium.ScreenSpaceEventHandler(scene.canvas)
   handler.setInputAction((e: any) => {
-    const picked = scene.pick(e.position)
-    const id = picked?.id?.id
-    if (typeof id === 'string' && id.startsWith('feat-')) selectedKey.value = id.slice(5)
-    else selectedKey.value = null
+    const list = scene.drillPick(e.position, 16)
+    let key: string | null = null
+    // 先找点/标签类要素(点位标记),再回退到面(库区)
+    for (const p of list) {
+      const id = p?.id?.id
+      if (typeof id === 'string' && id.startsWith('feat-')) { key = id.slice(5); break }
+    }
+    selectedKey.value = key
   }, Cesium.ScreenSpaceEventType.LEFT_CLICK)
 
   viewer.camera.flyTo({
@@ -200,7 +204,7 @@ function label(layer: string, key: string | null, text: string, lon: number, lat
   ds[layer].entities.add({
     id: key ? `feat-${key}` : undefined,
     position: Cesium.Cartesian3.fromDegrees(lon, lat, 0),
-    point: { pixelSize: 8, color: Cesium.Color.fromCssColorString(color), heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+    point: { pixelSize: 14, color: Cesium.Color.fromCssColorString(color), outlineColor: Cesium.Color.fromCssColorString('#02060c'), outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY },
     label: {
       text, font: 'bold 13px sans-serif', fillColor: Cesium.Color.WHITE,
       outlineColor: Cesium.Color.fromCssColorString('#02060c'), outlineWidth: 3,
